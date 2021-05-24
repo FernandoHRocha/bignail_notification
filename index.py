@@ -1,4 +1,4 @@
-import openpyxl
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.action_chains import ActionChains
@@ -6,6 +6,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium import webdriver
 from twilio.rest import Client
+import openpyxl
 import dados
 import time
 from openpyxl import Workbook
@@ -26,7 +27,9 @@ pregao_pass=dados.pregao_pass
 pregao_address=dados.pregao_address
 #pregao_sheet=xlrd.open_workbook('notificacoes.xlsx')
 #SELENIUM
-sel_driver = webdriver.Chrome("chromedriver.exe")
+chrome_options = Options()
+chrome_options.headless = True
+sel_driver = webdriver.Chrome("chromedriver.exe",chrome_options=chrome_options)
 sel_driver.maximize_window()
 sel_driver.get(pregao_address)
 sel_delay=0.2
