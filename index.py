@@ -9,10 +9,6 @@ from twilio.rest import Client
 import dados
 import time
 from openpyxl import Workbook
-#import xlrd
-#from xlutils.copy import copy
-#import xlwt
-import os
 
 #CONFIGURAÇÃO DE VARIAVEIS
 #PLANILHA DE CONTROLE
@@ -23,6 +19,7 @@ twilio_account = dados.twilio_account
 twilio_pass = dados.twilio_pass
 twilio_from_number=dados.twilio_from_number
 twilio_to_number=dados.twilio_to_number
+client = Client(twilio_account, twilio_pass)
 #PREGAO
 pregao_account=dados.pregao_account
 pregao_pass=dados.pregao_pass
@@ -33,10 +30,11 @@ sel_driver = webdriver.Chrome("chromedriver.exe")
 sel_driver.maximize_window()
 sel_driver.get(pregao_address)
 sel_delay=0.2
-#client = Client(twilio_account, twilio_pass)
 #message = client.messages.create(body='Hello there!', from_=twilio_from_number, to=twilio_to_number)
 #print(message.sid)
 
+def twilio_msg(msg):
+    client.messages.create(body=msg, from_=twilio_from_number, to=twilio_to_number)
 def sel_enterField(path, text):
     field = WebDriverWait(sel_driver,10).until(expected_conditions.presence_of_element_located((By.XPATH,path)))
     field.send_keys(text)
@@ -131,13 +129,15 @@ def sel_lerPregao(linka, sheet):
     sel_driver.switch_to.window(sel_windowToClose)
     table = sel_getElements('/html/body/table[2]/tbody/*')
     sh = excel_read[sheet]
-    for index in range(1,len(table)+1):
-        if(index<50):
-            msg = table[index].find_elements_by_xpath('./*')
-            cl = sh.cell(row=index, column=1)
-            cl.value = msg[0].text
-            cl = sh.cell(row=index, column=2)
-            cl.value = msg[1].text
+    for index in range(0,len(table)):
+        #if(index<50):
+        msg = table[index].find_elements_by_xpath('./*')
+          #  cl = sh.cell(row=index+1, column=1)
+           # cl.value = msg[0].text
+            #cl = sh.cell(row=index+1, column=2)
+            #cl.value = msg[1].text
+        if(index==0):
+            twilio_msg(sheet+" "+ msg[0].text + " " + msg[1].text)
     excel_read.save(pregao_path)
     sel_driver.close()
     sel_driver.switch_to.window(sel_mainWindow)
@@ -146,11 +146,10 @@ def sel_lerPregao(linka, sheet):
 for index in range(0,len(nail)):
     sel_refreshTable()
     criar = True
-    sheet_name=str(nail[index][0]+nail[index][1])
+    sheet_name=str(nail[index][0]+" | "+nail[index][1])
     for sheet in range(0,len(excel_read.sheetnames)):
         if(excel_read.worksheets[sheet].title == sheet_name):
             criar = False
-            print(link[index].text)
             if(link[index].text == 'Acompanhar'):
                 sel_lerPregao(link[index], sheet_name)
     if(criar):
@@ -160,6 +159,6 @@ for index in range(0,len(nail)):
             for sheet in range(0,len(excel_read.sheetnames)):
                 if(excel_read.worksheets[sheet].title == sheet_name):
                     sel_lerPregao(link[index], sheet_name)
-
+sel_driver.quit()
 excel_read.save(pregao_path)
 excel_read.close()
