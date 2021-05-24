@@ -1,5 +1,4 @@
-
-from sys import warnoptions
+import openpyxl
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.action_chains import ActionChains
@@ -9,12 +8,16 @@ from selenium import webdriver
 from twilio.rest import Client
 import dados
 import time
-import xlrd
-from xlutils.copy import copy
-import xlwt
+from openpyxl import Workbook
+#import xlrd
+#from xlutils.copy import copy
+#import xlwt
 import os
 
 #CONFIGURAÇÃO DE VARIAVEIS
+#PLANILHA DE CONTROLE
+pregao_path = dados.pregao_path
+excel_read = openpyxl.load_workbook(pregao_path)
 #TWILIO
 twilio_account = dados.twilio_account
 twilio_pass = dados.twilio_pass
@@ -57,6 +60,13 @@ def sel_getElement(path):
 def sel_getElements(path):
     el = WebDriverWait(sel_driver,10).until(expected_conditions.presence_of_all_elements_located((By.XPATH,path)))
     return el
+def sel_newWindowClick(path):
+    action = ActionChains(sel_driver).key_down(Keys.SHIFT)
+    action.perform()
+    action = ActionChains(sel_driver).click(path)
+    action.perform()
+    action = ActionChains(sel_driver).key_up(Keys.SHIFT)
+    action.perform()
 
 #ACESSAR O SISTEMA
 sel_buttonClick('//*[@id="card0"]/div/div/div/div[2]/button')
@@ -71,7 +81,6 @@ sel_windowToClose = sel_driver.window_handles[1]
 sel_driver.switch_to.window(sel_windowToClose)
 sel_driver.close()
 sel_driver.switch_to.window(sel_mainWindow)
-#frame1 = sel_getElement('//*[@id="corpo"]/frame')
 #ACESSAR SEÇÃO DE PREGÕES EM ANDAMENTO
 sel_switchFrame('/html/frameset/frame[1]')
 sel_mouseHover('/html/body/div[2]/div[1]')
@@ -80,14 +89,29 @@ time.sleep(0.2)
 sel_buttonClick('/html/body/div[1]/div[4]')
 sel_buttonClick('/html/body/div[1]/ul/li[4]/a')
 
+link = []
+nail = []
+def sel_refreshTable():
+    sel_switchFrame('/html/frameset/frameset/frame')
+    table = sel_getElements('/html/body/div[1]/table/tbody/tr[5]/td[2]/table/tbody/*')
+    link = []
+    nail = []
+    for index in range(0,len(table)):
+        if( index > 0 ):
+            linha = table[index].find_elements_by_xpath('./*')
+            link.append(linha[0])
+            aux_nail=[]
+            aux_nail.append(linha[1].text)
+            aux_nail.append(linha[2].text)
+            aux_nail.append(linha[3].text)
+            nail.append(aux_nail)
+
 sel_switchFrame('/html/frameset/frameset/frame')
 table = sel_getElements('/html/body/div[1]/table/tbody/tr[5]/td[2]/table/tbody/*')
 link = []
 nail = []
 for index in range(0,len(table)):
-    if( index == 0 ):
-        print('cabeçalho')
-    else:
+    if( index > 0 ):
         linha = table[index].find_elements_by_xpath('./*')
         link.append(linha[0])
         aux_nail=[]
@@ -96,38 +120,46 @@ for index in range(0,len(table)):
         aux_nail.append(linha[3].text)
         nail.append(aux_nail)
 
-def sel_lerPregao(link, sheet):
-    link.click()
-    sel_buttonClick('/html/body/div[1]/table/tbody/tr[6]/td[2]/input')
+def sel_lerPregao(linka, sheet):
     sel_mainWindow = sel_driver.window_handles[0]
+    sel_newWindowClick(linka)
+    sel_windowToClose = sel_driver.window_handles[1]
+    sel_driver.switch_to.window(sel_windowToClose)
+    sel_buttonClick('/html/body/div[1]/table/tbody/tr[6]/td[2]/input')
+    sel_driver.close()
     sel_windowToClose = sel_driver.window_handles[1]
     sel_driver.switch_to.window(sel_windowToClose)
     table = sel_getElements('/html/body/table[2]/tbody/*')
-    sh = copy(excel_read.get_sheet(sheet))
-    for index in range(0,len(table)):
-        if(index<20):
+    sh = excel_read[sheet]
+    for index in range(1,len(table)+1):
+        if(index<50):
             msg = table[index].find_elements_by_xpath('./*')
-            sh.write(index, 0, msg[0].text)
-            sh.write(index, 1, msg[1].text)
-            print('linha')
-    sh.save('notifa.xls')
-    print('arquivo salvo ')
+            cl = sh.cell(row=index, column=1)
+            cl.value = msg[0].text
+            cl = sh.cell(row=index, column=2)
+            cl.value = msg[1].text
+    excel_read.save(pregao_path)
     sel_driver.close()
     sel_driver.switch_to.window(sel_mainWindow)
-    sel_buttonClick('/html/body/div[1]/table/tbody/tr[4]/td[2]/input[2]')
 
-excel_read = xlrd.open_workbook('notifa.xls')
-excel_write = copy(excel_read)
+#FUNÇÕES PLANILHA
 for index in range(0,len(nail)):
+    sel_refreshTable()
     criar = True
     sheet_name=str(nail[index][0]+nail[index][1])
-    for sheet in range(0,len(excel_read.sheets())):
-        if(excel_read.sheet_by_index(sheet).name == sheet_name):
+    for sheet in range(0,len(excel_read.sheetnames)):
+        if(excel_read.worksheets[sheet].title == sheet_name):
             criar = False
+            print(link[index].text)
             if(link[index].text == 'Acompanhar'):
-                sel_lerPregao(link[index], sheet)
+                sel_lerPregao(link[index], sheet_name)
     if(criar):
-        excel_write.add_sheet(sheet_name)
-        excel_write.save('notifa.xls')
+        excel_read.create_sheet(sheet_name)
+        excel_read.save(pregao_path)
+        if(link[index].text == 'Acompanhar'):
+            for sheet in range(0,len(excel_read.sheetnames)):
+                if(excel_read.worksheets[sheet].title == sheet_name):
+                    sel_lerPregao(link[index], sheet_name)
 
-excel_write.save('notifa.xls')
+excel_read.save(pregao_path)
+excel_read.close()
