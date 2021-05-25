@@ -38,6 +38,7 @@ sel_delay=0.2
 
 def twilio_msg(msg):
     client.messages.create(body=msg, from_=twilio_from_number, to=twilio_to_number)
+    print('MENSAGEM ENVIADA')
 def sel_enterField(path, text):
     field = WebDriverWait(sel_driver,10).until(expected_conditions.presence_of_element_located((By.XPATH,path)))
     field.send_keys(text)
@@ -120,8 +121,9 @@ for index in range(0,len(table)):
         aux_nail.append(linha[2].text)
         aux_nail.append(linha[3].text)
         nail.append(aux_nail)
-
-def sel_lerPregao(linka, sheet):
+print('LISTANDO PREGÕES')
+twilio_msg('No momento '+ str(len(link)) +' pregões estão ativos.')
+def sel_lerPregao(linka, sheet, exist):
     sel_mainWindow = sel_driver.window_handles[0]
     sel_newWindowClick(linka)
     sel_windowToClose = sel_driver.window_handles[1]
@@ -132,15 +134,30 @@ def sel_lerPregao(linka, sheet):
     sel_driver.switch_to.window(sel_windowToClose)
     table = sel_getElements('/html/body/table[2]/tbody/*')
     sh = excel_read[sheet]
-    for index in range(0,len(table)):
-        #if(index<50):
-        msg = table[index].find_elements_by_xpath('./*')
-          #  cl = sh.cell(row=index+1, column=1)
-           # cl.value = msg[0].text
-            #cl = sh.cell(row=index+1, column=2)
-            #cl.value = msg[1].text
-        if(index==0):
-            twilio_msg(sheet+" "+ msg[0].text + " " + msg[1].text)
+    if(exist):
+        msg = table[0].find_elements_by_xpath('./*')
+        if(sh.cell(row=1, column=1).value == msg[0].text):
+            twilio_msg(sheet+" sem novas atividades.")
+        else:
+            for index in range(0,len(table)):
+                if(index<50):
+                    msg = table[index].find_elements_by_xpath('./*')
+                    cl = sh.cell(row=index+1, column=1)
+                    cl.value = msg[0].text
+                    cl = sh.cell(row=index+1, column=2)
+                    cl.value = msg[1].text
+                if(index==0):
+                    twilio_msg(sheet+" "+ msg[0].text + " " + msg[1].text)
+    else:
+        for index in range(0,len(table)):
+            if(index<50):
+                msg = table[index].find_elements_by_xpath('./*')
+                cl = sh.cell(row=index+1, column=1)
+                cl.value = msg[0].text
+                cl = sh.cell(row=index+1, column=2)
+                cl.value = msg[1].text
+            if(index==0):
+                twilio_msg
     excel_read.save(pregao_path)
     sel_driver.close()
     sel_driver.switch_to.window(sel_mainWindow)
@@ -154,14 +171,16 @@ for index in range(0,len(nail)):
         if(excel_read.worksheets[sheet].title == sheet_name):
             criar = False
             if(link[index].text == 'Acompanhar'):
-                sel_lerPregao(link[index], sheet_name)
+                sel_lerPregao(link[index], sheet_name, True)
     if(criar):
         excel_read.create_sheet(sheet_name)
         excel_read.save(pregao_path)
         if(link[index].text == 'Acompanhar'):
             for sheet in range(0,len(excel_read.sheetnames)):
                 if(excel_read.worksheets[sheet].title == sheet_name):
-                    sel_lerPregao(link[index], sheet_name)
+                    sel_lerPregao(link[index], sheet_name, False)
+
+twilio_msg('Varredura finalizada.')
 sel_driver.quit()
 excel_read.save(pregao_path)
 excel_read.close()
