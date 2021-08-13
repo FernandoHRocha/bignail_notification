@@ -64,11 +64,11 @@ class ComprasNet:#LEVA A APLICAÇÃO ATÉ UM LUGAR EM COMUM DENTRO DO COMPRASNET
     
     def configurar_webdriver(self):
         self.options = webdriver.ChromeOptions()
-        self.options.add_argument ('--headless')
+        #self.options.add_argument ('--headless')
         self.options.add_argument('--log-level=3')
         self.options.add_argument('--disable-notifications')
         self.sel_driver = webdriver.Chrome("chromedriver.exe", options=self.options)
-        # self.sel_driver.maximize_window()
+        self.sel_driver.maximize_window()
         endereco_comprasnet=dados.pregao_address
         self.sel_driver.get(endereco_comprasnet)
 
@@ -102,19 +102,50 @@ class ComprasNet:#LEVA A APLICAÇÃO ATÉ UM LUGAR EM COMUM DENTRO DO COMPRASNET
         print('1 - Registrar proposta.')
         print('2 - Participar da disputa de lances')
         escolha = input('>')
-        function_dict[escolha](class_dict[escolha])
+        function_dict[escolha](self.sel_driver)
 
 class Registrar:
-    def iniciar(self):
+
+    def iniciar(driver):
+        self = Registrar
+        self.sel_driver = driver
+        self.ler_planilha_cotacao(self)
+        self.acessar_cadastro(self)
         return
+    
     def ler_planilha_cotacao(self):
-        return
+        wb = openpyxl.load_workbook('COTACAO.xlsx', data_only=True)['Controle']
+        self.pregao = wb.cell(2,1).value
+        self.uasg = wb.cell(2,2).value
+        wb = openpyxl.load_workbook('COTACAO.xlsx', data_only=True)['Planilha1']
+        itens=[]
+        for row in range(2,wb.max_row):
+            rowItens=[]
+            colunas_interesse=[1,2,3,4,9,13]
+            colunas_monetarias =[3,9]
+            for col in colunas_interesse:
+                if(col in colunas_monetarias):
+                    rowItens.append(round(wb.cell(row,col).value,2))
+                else:
+                    rowItens.append(wb.cell(row,col).value)
+            itens.append(rowItens)
+
+    def acessar_cadastro(self):
+        sel_buttonClick(self,'/html/body/div[1]/ul/li[1]/a')
+        sel_buttonClick(self,'/html/body/div[1]/ul/li[1]/span')
+        sel_enterField(self,'/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[3]/td[2]/input',self.uasg)
+        sel_enterField(self,'/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[4]/td[2]/input',self.pregao)
+        sel_buttonClick(self,'/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[7]/td/input[3]')
+        sel_buttonClick(self,'/html/body/table/tbody/tr[2]/td/table[2]/tbody/tr[2]/td[2]/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td[1]/a')
+
     def registrar_proposta(self):
         return
 
 class Disputar:
 
-    def iniciar(self):
+    def iniciar(driver):
+        self = Disputar
+        self.sel_driver = driver
         self.pasta_cotacao(self)
         self.ler_planilha_cotacao(self)
         return
@@ -151,11 +182,16 @@ class Disputar:
     def disputar_lances(self):
         return
 
-#start = ComprasNet()
-#start.iniciar()
+start = ComprasNet()
+start.iniciar()
 
-start = Disputar()
-start.ler_planilha_cotacao()
+#start = Disputar()
+#start.ler_planilha_cotacao()
+
+#start = Registrar()
+#start.ler_planilha_cotacao()
+
+
 
 def registrar():
     print('Inserir a planilha de planejamento na pasta que abriu, com o nome COTACAO.xlsx.')
