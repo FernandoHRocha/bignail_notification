@@ -1,17 +1,17 @@
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium import webdriver
 from openpyxl import Workbook
+import dados_cotacao
+import conversor
 import openpyxl
 import dados
 import time
 import os
-import dados_cotacao
-import conversor
 
 sel_delay=0.5
 
@@ -23,7 +23,7 @@ def sel_enterFieldElement(element, text):
     element.send_keys(text)
     time.sleep(sel_delay)
 def sel_buttonClick(self, path):
-    button = WebDriverWait(self.sel_driver,5).until(expected_conditions.element_to_be_clickable((By.XPATH,path)))
+    button = WebDriverWait(self.sel_driver,1).until(expected_conditions.element_to_be_clickable((By.XPATH,path)))
     button.click()
 def sel_switchFrame(self, path):
     self.sel_driver.switch_to.default_content()
@@ -54,22 +54,21 @@ def sel_fechar_popup(self):
     self.sel_driver.switch_to.window(sel_mainWindow)
 
 
-class Robo:
+class ComprasNet:#LEVA A APLICAÇÃO ATÉ UM LUGAR EM COMUM DENTRO DO COMPRASNET E MOSTRA AS OPÇÕES DE OPERAÇÕES
 
     def iniciar(self):
         self.configurar_webdriver()
         self.coletar_credenciais_acessar_sistema()
         self.acessar_menu_comprasnet()
-        #self.ler_planilha_cotacao()
-        self.fechar_webdriver()
+        self.oferecer_opcoes()
     
     def configurar_webdriver(self):
         self.options = webdriver.ChromeOptions()
-        #self.options.add_argument ('--headless')
+        self.options.add_argument ('--headless')
         self.options.add_argument('--log-level=3')
         self.options.add_argument('--disable-notifications')
         self.sel_driver = webdriver.Chrome("chromedriver.exe", options=self.options)
-        self.sel_driver.maximize_window()
+        # self.sel_driver.maximize_window()
         endereco_comprasnet=dados.pregao_address
         self.sel_driver.get(endereco_comprasnet)
 
@@ -96,19 +95,69 @@ class Robo:
                 self.sel_driver.refresh()
                 sel_fechar_popup(self)
 
+    def oferecer_opcoes(self):
+        function_dict={'1':Registrar.iniciar,'2':Disputar.iniciar}
+        class_dict={'1':Registrar,'2':Disputar}
+        print('Escolha o modo de operação')
+        print('1 - Registrar proposta.')
+        print('2 - Participar da disputa de lances')
+        escolha = input('>')
+        function_dict[escolha](class_dict[escolha])
+
+class Registrar:
+    def iniciar(self):
+        return
     def ler_planilha_cotacao(self):
-
+        return
+    def registrar_proposta(self):
         return
 
-    def fechar_webdriver(self):
-        choose = input('>')
-        self.sel_driver.close()
+class Disputar:
+
+    def iniciar(self):
+        self.pasta_cotacao(self)
+        self.ler_planilha_cotacao(self)
         return
 
-start = Robo()
-start.iniciar()
+    def pasta_cotacao(self):
+        print('A planilha de cotação já está na pasta? O nome do arquivo deve ser "COTACAO.xlsx"')
+        print('1 - Abrir a pasta.')
+        print('2 - A planilha já está na pasta.')
+        escolha = input('>')
+        if(escolha == '1'):
+            path = 'C:/Fernando/LOJA/outros/twilio/bignail_notification'
+            path = os.path.realpath(path)
+            os.startfile(path)
 
-def register():
+    def ler_planilha_cotacao(self):
+        wb = openpyxl.load_workbook('COTACAO.xlsx', data_only=True)['Controle']
+        self.pregao = wb.cell(2,1).value
+        self.uasg = wb.cell(2,2).value
+        wb = openpyxl.load_workbook('COTACAO.xlsx', data_only=True)['Planilha1']
+        itens=[]
+        for row in range(2,wb.max_row):
+            rowItens=[]
+            colunas_interesse=[1,2,3,4,9]
+            colunas_monetarias =[3,9]
+            for col in colunas_interesse:
+                if(col in colunas_monetarias):
+                    rowItens.append(round(wb.cell(row,col).value,2))
+                else:
+                    rowItens.append(wb.cell(row,col).value)
+            itens.append(rowItens)
+        print(itens)
+        
+
+    def disputar_lances(self):
+        return
+
+#start = ComprasNet()
+#start.iniciar()
+
+start = Disputar()
+start.ler_planilha_cotacao()
+
+def registrar():
     print('Inserir a planilha de planejamento na pasta que abriu, com o nome COTACAO.xlsx.')
     print('Quando estiver pronto pressione ENTER para continuar.')
     path = 'C:/Fernando/LOJA/outros/twilio/bignail_notification'
@@ -125,11 +174,7 @@ def register():
     itens = dados_cotacao.import_items()
     table = sel_getElements('/html/body/table/tbody/tr[2]/td/table[2]/tbody/tr[2]/td[2]/form/table/tbody/tr[2]/td/table/tbody')
     
-def disputar(pregao, cotados):
-    
-    return
-    
-def fight():
+def disputa():
     itens_disputa=[]
     print('Inserir a planilha de planejamento com o nome COTACAO.xlsx.')
     print('1 - Abrir a pasta.')
@@ -220,8 +265,7 @@ def fight():
                         items = table.find_elements_by_xpath('./div')
                         print(str(len(items))+' encerrados: ')
 
-#function_dict={'1':register,'2':fight}
 
-
-
-#function_dict[choose]()
+def fechar_webdriver(self):
+    choose = input('>')
+    self.sel_driver.close()

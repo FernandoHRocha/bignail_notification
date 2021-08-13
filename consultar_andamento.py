@@ -39,6 +39,7 @@ nail = []
 options = webdriver.ChromeOptions()
 options.add_argument ('--headless')
 options.add_argument('--log-level=3')
+options.add_argument('--disable-notifications')
 sel_driver = webdriver.Chrome("chromedriver.exe", options=options)
 sel_driver.maximize_window()
 sel_driver.get(pregao_address)
