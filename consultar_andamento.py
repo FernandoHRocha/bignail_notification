@@ -1,16 +1,69 @@
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium import webdriver
+import sel_operacoes_comum as sel
 import openpyxl
 import dados
 import time
 import sys
 import os
 from openpyxl import Workbook
+
+excel_read=''
+
+class andamento():
+    def iniciar(self):
+        self.pregao_planilha()
+        print("Varredura iniciada.")
+        sel.configurar_webdriver(self)
+        sel.coletar_credenciais_acessar_sistema(self)
+        sel.acessar_menu_comprasnet(self)
+        self.verificar_anexos()
+
+    def pregao_planilha(self):
+        pregao_path = dados.pregao_path
+        try:
+            self.excel_read = openpyxl.load_workbook(pregao_path)
+        except:
+            print("A planilha de controle de mensagens foi corrompida.")
+            if os.path.exists(pregao_path):
+                os.remove(pregao_path)
+            wb = openpyxl.Workbook().save(pregao_path)
+            self.excel_read = openpyxl.load_workbook(pregao_path)
+            print("Planilha de controle recriada.")
+    
+    def verificar_anexos(self):
+        sel.newWindowClick(self,'/html/body/div[1]/ul/li[11]/a')
+        time.sleep(0.2)
+        sel_windowToClose = sel_driver.window_handles[1]
+        self.sel_driver.switch_to.window(sel_windowToClose)
+        table = sel.getElements('/html/body/div[1]/form/table/tbody/tr[5]/td[2]/table/tbody/*')
+        del table[0]
+        if(table[0].text == "No momento não existem pregões para enviar anexos."):
+            print('Sem envio de anexos pendente')
+        else:
+            for rows in table:
+                print('\nATENÇÃO É PRECISO ENVIAR ANEXOS PARA: ')
+                info = rows.find_elements_by_xpath('./*')
+                print("Pregão: "+info[1].text +"\nUASG: "+ info[2].text + "\nÓrgão: "+ info[3].text)
+                print('\n')
+        self.sel_driver.close()
+        self.sel_driver.switch_to.window(self.sel_mainWindow)
+        print('certo')
+    
+    def varrer_pregoes(self):
+        #sel_switchFrame('/html/frameset/frameset/frame')
+        #sel_buttonClick('/html/body/div[1]/ul/li[4]/a')
+
+        return
+
+bot = andamento()
+bot.iniciar()
+exit()
+
 
 print("Varredura iniciada.")
 
@@ -100,6 +153,7 @@ def sel_refreshTable():
         aux_nail.append(linha[0])
         def_nail.append(aux_nail)
     return def_nail
+
 def sel_lerPregao(linka, sheet, exist):
     sel_mainWindow = sel_driver.window_handles[0]
     sel_newWindowClick(linka)

@@ -5,6 +5,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium import webdriver
+import dados
 import time
 
 sel_delay = 0.2
@@ -48,9 +49,42 @@ def newWindowClick(self, path):
     action.perform()
 
 def fechar_popup(self):
-    sel_mainWindow = self.sel_driver.window_handles[0]
+    self.sel_mainWindow = self.sel_driver.window_handles[0]
     time.sleep(0.5)
     sel_windowToClose = self.sel_driver.window_handles[1]
     self.sel_driver.switch_to.window(sel_windowToClose)
     self.sel_driver.close()
-    self.sel_driver.switch_to.window(sel_mainWindow)
+    self.sel_driver.switch_to.window(self.sel_mainWindow)
+
+def configurar_webdriver(self):
+    self.options = webdriver.ChromeOptions()
+    #self.options.add_argument ('--headless')
+    self.options.add_argument('--log-level=3')
+    self.options.add_argument('--disable-notifications')
+    self.sel_driver = webdriver.Chrome("chromedriver.exe", options=self.options)
+    self.sel_driver.maximize_window()
+    endereco_comprasnet=dados.pregao_address
+    self.sel_driver.get(endereco_comprasnet)
+
+def coletar_credenciais_acessar_sistema(self):
+    login_comprasnet=dados.pregao_account
+    senha_comprasnet=dados.pregao_pass
+    buttonClick(self,'//*[@id="card0"]/div/div/div/div[2]/button')
+    enterField(self,'//*[@id="txtLogin"]',login_comprasnet)
+    enterField(self,'//*[@id="txtSenha"]', senha_comprasnet)
+    buttonClick(self,'//*[@id="card0"]/div/div/div[2]/div[4]/button[2]')
+    fechar_popup(self)
+    print('Logado no sistema ComprasNet')
+
+def acessar_menu_comprasnet(self):
+    while (True):
+        switchFrame(self,'/html/frameset/frame[1]')
+        mouseHover(self,'/html/body/div[2]/div[1]')
+        switchFrame(self,'/html/frameset/frameset/frame')
+        time.sleep(0.2)
+        try:
+            buttonClick(self,'/html/body/div[2]/div[4]')
+            break
+        except:
+            self.sel_driver.refresh()
+            fechar_popup(self)

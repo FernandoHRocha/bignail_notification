@@ -19,43 +19,10 @@ sel_driver = ''
 class ComprasNet:#LEVA A APLICAÇÃO ATÉ UM LUGAR EM COMUM DENTRO DO COMPRASNET E MOSTRA AS OPÇÕES DE OPERAÇÕES
 
     def iniciar(self):
-        self.configurar_webdriver()
-        self.coletar_credenciais_acessar_sistema()
-        self.acessar_menu_comprasnet()
+        sel.configurar_webdriver(self)
+        sel.coletar_credenciais_acessar_sistema(self)
+        sel.acessar_menu_comprasnet(self)
         self.oferecer_opcoes()
-    
-    def configurar_webdriver(self):
-        self.options = webdriver.ChromeOptions()
-        #self.options.add_argument ('--headless')
-        self.options.add_argument('--log-level=3')
-        self.options.add_argument('--disable-notifications')
-        self.sel_driver = webdriver.Chrome("chromedriver.exe", options=self.options)
-        self.sel_driver.maximize_window()
-        endereco_comprasnet=dados.pregao_address
-        self.sel_driver.get(endereco_comprasnet)
-
-    def coletar_credenciais_acessar_sistema(self):
-        login_comprasnet=dados.pregao_account
-        senha_comprasnet=dados.pregao_pass
-        sel.buttonClick(self,'//*[@id="card0"]/div/div/div/div[2]/button')
-        sel.enterField(self,'//*[@id="txtLogin"]',login_comprasnet)
-        sel.enterField(self,'//*[@id="txtSenha"]', senha_comprasnet)
-        sel.buttonClick(self,'//*[@id="card0"]/div/div/div[2]/div[4]/button[2]')
-        sel.fechar_popup(self)
-        print('Logado no sistema ComprasNet')
-
-    def acessar_menu_comprasnet(self):
-        while (True):
-            sel.switchFrame(self,'/html/frameset/frame[1]')
-            sel.mouseHover(self,'/html/body/div[2]/div[1]')
-            sel.switchFrame(self,'/html/frameset/frameset/frame')
-            time.sleep(0.2)
-            try:
-                sel.buttonClick(self,'/html/body/div[2]/div[4]')
-                break
-            except:
-                self.sel_driver.refresh()
-                sel.fechar_popup(self)
 
     def oferecer_opcoes(self):
         class_dict={'1':Registrar,'2':Disputar}
@@ -143,14 +110,14 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
     def disputar_lances(self):
         return
 
-start = ComprasNet()
-start.iniciar()
+bot = ComprasNet()
+bot.iniciar()
 
-#start = Disputar()
-#start.ler_planilha_cotacao()
+#bot = Disputar()
+#bot.ler_planilha_cotacao()
 
-#start = Registrar()
-#start.ler_planilha_cotacao()
+#bot = Registrar()
+#bot.ler_planilha_cotacao()
     
 def disputa():
     itens_disputa=[]
