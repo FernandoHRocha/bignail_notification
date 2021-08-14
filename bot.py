@@ -6,7 +6,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium import webdriver
 from openpyxl import Workbook
-import dados_cotacao
+import sel_operacoes_comum as sel
 import conversor
 import openpyxl
 import dados
@@ -14,45 +14,7 @@ import time
 import os
 
 sel_delay=0.5
-
-def sel_enterField(self, path, text):
-    field = WebDriverWait(self.sel_driver,10).until(expected_conditions.presence_of_element_located((By.XPATH,path)))
-    field.send_keys(text)
-    time.sleep(sel_delay)
-def sel_enterFieldElement(element, text):
-    element.send_keys(text)
-    time.sleep(sel_delay)
-def sel_buttonClick(self, path):
-    button = WebDriverWait(self.sel_driver,1).until(expected_conditions.element_to_be_clickable((By.XPATH,path)))
-    button.click()
-def sel_switchFrame(self, path):
-    self.sel_driver.switch_to.default_content()
-    frame = WebDriverWait(self.sel_driver,10).until(expected_conditions.frame_to_be_available_and_switch_to_it((By.XPATH,path)))
-def sel_mouseHover(self, path):
-    clickable = WebDriverWait(self.sel_driver,10).until(expected_conditions.element_to_be_clickable((By.XPATH,path)))
-    hover = ActionChains(self.sel_driver).move_to_element(clickable)
-    hover.perform()
-def sel_getElement(self, path):
-    el = WebDriverWait(self.sel_driver,10).until(expected_conditions.presence_of_element_located((By.XPATH,path)))
-    return el
-def sel_getElements(self, path):
-    el = WebDriverWait(self.sel_driver,10).until(expected_conditions.presence_of_all_elements_located((By.XPATH,path)))
-    return el
-def sel_newWindowClick(self, path):
-    action = ActionChains(self.sel_driver).key_down(Keys.SHIFT)
-    action.perform()
-    action = ActionChains(self.sel_driver).click(path)
-    action.perform()
-    action = ActionChains(self.sel_driver).key_up(Keys.SHIFT)
-    action.perform()
-def sel_fechar_popup(self):
-    sel_mainWindow = self.sel_driver.window_handles[0]
-    time.sleep(0.5)
-    sel_windowToClose = self.sel_driver.window_handles[1]
-    self.sel_driver.switch_to.window(sel_windowToClose)
-    self.sel_driver.close()
-    self.sel_driver.switch_to.window(sel_mainWindow)
-
+sel_driver = ''
 
 class ComprasNet:#LEVA A APLICAÇÃO ATÉ UM LUGAR EM COMUM DENTRO DO COMPRASNET E MOSTRA AS OPÇÕES DE OPERAÇÕES
 
@@ -75,40 +37,40 @@ class ComprasNet:#LEVA A APLICAÇÃO ATÉ UM LUGAR EM COMUM DENTRO DO COMPRASNET
     def coletar_credenciais_acessar_sistema(self):
         login_comprasnet=dados.pregao_account
         senha_comprasnet=dados.pregao_pass
-        sel_buttonClick(self,'//*[@id="card0"]/div/div/div/div[2]/button')
-        sel_enterField(self,'//*[@id="txtLogin"]',login_comprasnet)
-        sel_enterField(self,'//*[@id="txtSenha"]', senha_comprasnet)
-        sel_buttonClick(self,'//*[@id="card0"]/div/div/div[2]/div[4]/button[2]')
-        sel_fechar_popup(self)
+        sel.buttonClick(self,'//*[@id="card0"]/div/div/div/div[2]/button')
+        sel.enterField(self,'//*[@id="txtLogin"]',login_comprasnet)
+        sel.enterField(self,'//*[@id="txtSenha"]', senha_comprasnet)
+        sel.buttonClick(self,'//*[@id="card0"]/div/div/div[2]/div[4]/button[2]')
+        sel.fechar_popup(self)
         print('Logado no sistema ComprasNet')
 
     def acessar_menu_comprasnet(self):
         while (True):
-            sel_switchFrame(self,'/html/frameset/frame[1]')
-            sel_mouseHover(self,'/html/body/div[2]/div[1]')
-            sel_switchFrame(self,'/html/frameset/frameset/frame')
+            sel.switchFrame(self,'/html/frameset/frame[1]')
+            sel.mouseHover(self,'/html/body/div[2]/div[1]')
+            sel.switchFrame(self,'/html/frameset/frameset/frame')
             time.sleep(0.2)
             try:
-                sel_buttonClick(self,'/html/body/div[2]/div[4]')
+                sel.buttonClick(self,'/html/body/div[2]/div[4]')
                 break
             except:
                 self.sel_driver.refresh()
-                sel_fechar_popup(self)
+                sel.fechar_popup(self)
 
     def oferecer_opcoes(self):
-        function_dict={'1':Registrar.iniciar,'2':Disputar.iniciar}
         class_dict={'1':Registrar,'2':Disputar}
         print('Escolha o modo de operação')
         print('1 - Registrar proposta.')
         print('2 - Participar da disputa de lances')
         escolha = input('>')
-        function_dict[escolha](self.sel_driver)
+        global sel_driver
+        sel_driver = self.sel_driver
+        class_dict[escolha].iniciar(class_dict[escolha])
 
-class Registrar:
+class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
 
-    def iniciar(driver):
-        self = Registrar
-        self.sel_driver = driver
+    def iniciar(self):
+        self.sel_driver = sel_driver
         self.ler_planilha_cotacao(self)
         self.acessar_cadastro(self)
         return
@@ -131,21 +93,20 @@ class Registrar:
             itens.append(rowItens)
 
     def acessar_cadastro(self):
-        sel_buttonClick(self,'/html/body/div[1]/ul/li[1]/a')
-        sel_buttonClick(self,'/html/body/div[1]/ul/li[1]/span')
-        sel_enterField(self,'/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[3]/td[2]/input',self.uasg)
-        sel_enterField(self,'/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[4]/td[2]/input',self.pregao)
-        sel_buttonClick(self,'/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[7]/td/input[3]')
-        sel_buttonClick(self,'/html/body/table/tbody/tr[2]/td/table[2]/tbody/tr[2]/td[2]/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td[1]/a')
+        sel.buttonClick(self,'/html/body/div[1]/ul/li[1]/a')
+        sel.buttonClick(self,'/html/body/div[1]/ul/li[1]/span')
+        sel.enterField(self,'/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[3]/td[2]/input',self.uasg)
+        sel.enterField(self,'/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[4]/td[2]/input',self.pregao)
+        sel.buttonClick(self,'/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[7]/td/input[3]')
+        sel.buttonClick(self,'/html/body/table/tbody/tr[2]/td/table[2]/tbody/tr[2]/td[2]/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td[1]/a')
 
     def registrar_proposta(self):
         return
 
-class Disputar:
+class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
 
-    def iniciar(driver):
-        self = Disputar
-        self.sel_driver = driver
+    def iniciar(self):
+        self.sel_driver = sel_driver
         self.pasta_cotacao(self)
         self.ler_planilha_cotacao(self)
         return
@@ -190,25 +151,6 @@ start.iniciar()
 
 #start = Registrar()
 #start.ler_planilha_cotacao()
-
-
-
-def registrar():
-    print('Inserir a planilha de planejamento na pasta que abriu, com o nome COTACAO.xlsx.')
-    print('Quando estiver pronto pressione ENTER para continuar.')
-    path = 'C:/Fernando/LOJA/outros/twilio/bignail_notification'
-    path = os.path.realpath(path)
-    os.startfile(path)
-    choose = input('>')
-    uasg = str(dados_cotacao.import_uasg())
-    numero = str(dados_cotacao.import_numero())
-    sel_buttonClick('/html/body/div[1]/ul/li[1]/a')
-    sel_buttonClick('/html/body/div[1]/ul/li[1]/span/a[1]')
-    sel_enterField('/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[3]/td[2]/input', uasg)
-    sel_enterField('/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[4]/td[2]/input', numero)
-    sel_buttonClick('/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[7]/td/input[3]')
-    itens = dados_cotacao.import_items()
-    table = sel_getElements('/html/body/table/tbody/tr[2]/td/table[2]/tbody/tr[2]/td[2]/form/table/tbody/tr[2]/td/table/tbody')
     
 def disputa():
     itens_disputa=[]
