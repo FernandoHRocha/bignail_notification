@@ -135,11 +135,12 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
             print(len(itens_em_disputa))
             for item in itens_em_disputa:
                 codigo_item = str(item.find_element_by_xpath('./div[1]/div[1]/div[1]/div[1]/span[1]').text)
-                #melhor_valor = str(item.find_element_by_xpath('.div[2]/div[1]/div[2]/div/div[1]/div[2]/div[1]').text)
-                #nosso_valor = str(item.find_element_by_xpath('.div[2]/div[1]/div[2]/div/div[1]/div[2]/div[2]').text)
+                melhor_valor = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[1]/div[2]/div[1]').text)
+                nosso_valor = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[1]/div[2]/div[2]').text)
                 print(codigo_item)
-                #print(melhor_valor)
-                #print(nosso_valor)
+                print(melhor_valor)
+                print(nosso_valor)
+                #CONSEGUE LER DURANTE A DISPUTA ABERTA E DISPURA FECHADA NÃO CONVOCADO
             return
         return
     
@@ -161,6 +162,7 @@ bot.iniciar()
 
 #bot = Registrar()
 #bot.ler_planilha_cotacao()
+exit()
     
 def disputa():
     itens_disputa=[]
