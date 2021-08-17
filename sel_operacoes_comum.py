@@ -43,7 +43,15 @@ def getElements(self, path):
 def newWindowClick(self, path):
     action = ActionChains(self.sel_driver).key_down(Keys.SHIFT)
     action.perform()
-    action = ActionChains(self.sel_driver).click(path)
+    action = ActionChains(self.sel_driver).click(getElement(self,path))
+    action.perform()
+    action = ActionChains(self.sel_driver).key_up(Keys.SHIFT)
+    action.perform()
+
+def clicar_elemento_nova_janela(self, elemento):
+    action = ActionChains(self.sel_driver).key_down(Keys.SHIFT)
+    action.perform()
+    action = ActionChains(self.sel_driver).click(elemento)
     action.perform()
     action = ActionChains(self.sel_driver).key_up(Keys.SHIFT)
     action.perform()
@@ -58,11 +66,11 @@ def fechar_popup(self):
 
 def configurar_webdriver(self):
     self.options = webdriver.ChromeOptions()
-    #self.options.add_argument ('--headless')
+    self.options.add_argument ('--headless')
     self.options.add_argument('--log-level=3')
     self.options.add_argument('--disable-notifications')
     self.sel_driver = webdriver.Chrome("chromedriver.exe", options=self.options)
-    self.sel_driver.maximize_window()
+    #self.sel_driver.maximize_window()
     endereco_comprasnet=dados.pregao_address
     self.sel_driver.get(endereco_comprasnet)
 

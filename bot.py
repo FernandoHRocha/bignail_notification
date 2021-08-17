@@ -74,11 +74,14 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
 
     def iniciar(self):
         self.sel_driver = sel_driver
-        self.pasta_cotacao(self)
+        self.abrir_pasta_cotacao(self)
         self.ler_planilha_cotacao(self)
+        self.abrir_disputa(self)
+        self.reconhecer_disputa(self)
+        #self.extrair_relatorio(self)
         return
 
-    def pasta_cotacao(self):
+    def abrir_pasta_cotacao(self):
         print('A planilha de cotação já está na pasta? O nome do arquivo deve ser "COTACAO.xlsx"')
         print('1 - Abrir a pasta.')
         print('2 - A planilha já está na pasta.')
@@ -90,24 +93,64 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
 
     def ler_planilha_cotacao(self):
         wb = openpyxl.load_workbook('COTACAO.xlsx', data_only=True)['Controle']
-        self.pregao = wb.cell(2,1).value
-        self.uasg = wb.cell(2,2).value
+        self.pregao = str(wb.cell(2,1).value)
+        self.uasg = str(wb.cell(2,2).value)
         wb = openpyxl.load_workbook('COTACAO.xlsx', data_only=True)['Planilha1']
-        itens=[]
+        self.itens=[]
         for row in range(2,wb.max_row):
             rowItens=[]
-            colunas_interesse=[1,2,3,4,9]
-            colunas_monetarias =[3,9]
+            colunas_interesse=[1,4,5,10]
+            colunas_monetarias =[4,10]
             for col in colunas_interesse:
                 if(col in colunas_monetarias):
                     rowItens.append(round(wb.cell(row,col).value,2))
                 else:
                     rowItens.append(wb.cell(row,col).value)
-            itens.append(rowItens)
-        print(itens)
-        
+            self.itens.append(rowItens)
+        print(self.itens)     
 
-    def disputar_lances(self):
+    def abrir_disputa(self):
+        sel.buttonClick(self,'/html/body/div[1]/ul/li[2]/a')
+        tabela = sel.getElements(self,'/html/body/table/tbody/tr[2]/td/table[2]/tbody/tr[3]/td[2]/table/tbody/tr')
+        del tabela[0]
+        for linha in tabela:
+            colunas = linha.find_elements_by_xpath('./td')
+            codpregao = colunas[1].text
+            coduasg = colunas[2].text
+            if((codpregao == self.pregao) and (coduasg == self.uasg)):
+                colunas[0].click()
+        time.sleep(5)
+        self.janela_pregoes = self.sel_driver.window_handles[0]
+        self.janela_disputa = self.sel_driver.window_handles[1]
+        self.sel_driver.switch_to.window(self.janela_disputa)
+        
+    def reconhecer_disputa(self):
+        self.modo_disputa = sel.getElement(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[4]/div[1]/app-identificacao-compra/div/span').text
+        self.navegacao_itens = sel.getElements(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/ul/li')
+        for botao in self.navegacao_itens:
+            print(botao.text)
+        if(self.navegacao_itens[1].text != 'Em disputa'):
+            self.navegacao_itens[1].click()
+            itens_em_disputa = sel.getElements(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[2]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div/div')
+            print(len(itens_em_disputa))
+            for item in itens_em_disputa:
+                codigo_item = str(item.find_element_by_xpath('./div[1]/div[1]/div[1]/div[1]/span[1]').text)
+                #melhor_valor = str(item.find_element_by_xpath('.div[2]/div[1]/div[2]/div/div[1]/div[2]/div[1]').text)
+                #nosso_valor = str(item.find_element_by_xpath('.div[2]/div[1]/div[2]/div/div[1]/div[2]/div[2]').text)
+                print(codigo_item)
+                #print(melhor_valor)
+                #print(nosso_valor)
+            return
+        return
+    
+    def extrair_relatorio(self):
+        self.navegacao_itens[2].click()
+        itens_encerrados = sel.getElements(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[3]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div/div')
+        self.resultado_por_item = []
+        for item in itens_encerrados:
+            aux_item = []
+            aux_item.append(str(item.find_elemet_by_xpath('./div[1]/div[1]/div[1]/div').text))
+            
         return
 
 bot = ComprasNet()
