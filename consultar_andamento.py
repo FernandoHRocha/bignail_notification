@@ -90,15 +90,14 @@ class andamento():
                             self.ler_pregao(nail[index][3], sheet_name, False)
 
     def ler_pregao(self, linka, sheet, exist):
-        sel_driver = self.sel_driver
-        sel_mainWindow = sel_driver.window_handles[0]
+        sel_mainWindow = self.sel_driver.window_handles[0]
         sel.clicar_elemento_nova_janela(self, linka)
         time.sleep(1)
-        windowToClose = sel_driver.window_handles[1]
+        windowToClose = self.sel_driver.window_handles[1]
         self.sel_driver.switch_to.window(windowToClose)
         sel.buttonClick(self,'/html/body/div[1]/table/tbody/tr[6]/td[2]/input')
         self.sel_driver.close()
-        sel_windowToClose = sel_driver.window_handles[1]
+        sel_windowToClose = self.sel_driver.window_handles[1]
         self.sel_driver.switch_to.window(sel_windowToClose)
         table = sel.getElements(self,'/html/body/table[2]/tbody/*')
         sh = self.excel_read[sheet]
@@ -133,8 +132,8 @@ class andamento():
                 if(index==0):
                         print('_________________________ Processo: '+sheet+" "+ msg[0].text + "\n" + msg[1].text+"\n")
         self.excel_read.save(self.pregao_path)
-        sel_driver.close()
-        sel_driver.switch_to.window(sel_mainWindow)
+        self.sel_driver.close()
+        self.sel_driver.switch_to.window(sel_mainWindow)
     
     def finalizar(self):
         print('Varredura finalizada.')

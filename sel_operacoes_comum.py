@@ -1,3 +1,4 @@
+from selenium.webdriver.support.events import EventFiringWebDriver, AbstractEventListener
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
@@ -43,16 +44,14 @@ def getElements(self, path):
 def newWindowClick(self, path):
     action = ActionChains(self.sel_driver).key_down(Keys.SHIFT)
     action.perform()
-    action = ActionChains(self.sel_driver).click(getElement(self,path))
-    action.perform()
+    self.sel_driver.find_element_by_xpath(path).click()
     action = ActionChains(self.sel_driver).key_up(Keys.SHIFT)
     action.perform()
 
 def clicar_elemento_nova_janela(self, elemento):
     action = ActionChains(self.sel_driver).key_down(Keys.SHIFT)
     action.perform()
-    action = ActionChains(self.sel_driver).click(elemento)
-    action.perform()
+    elemento.click()
     action = ActionChains(self.sel_driver).key_up(Keys.SHIFT)
     action.perform()
 
