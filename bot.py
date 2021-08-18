@@ -1,15 +1,6 @@
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.by import By
-from selenium import webdriver
-from openpyxl import Workbook
 import sel_operacoes_comum as sel
 import conversor
 import openpyxl
-import dados
 import time
 import os
 
@@ -60,12 +51,12 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
             itens.append(rowItens)
 
     def acessar_cadastro(self):
-        sel.buttonClick(self,'/html/body/div[1]/ul/li[1]/a')
-        sel.buttonClick(self,'/html/body/div[1]/ul/li[1]/span')
+        sel.clicar_xpath(self,'/html/body/div[1]/ul/li[1]/a')
+        sel.clicar_xpath(self,'/html/body/div[1]/ul/li[1]/span')
         sel.enterField(self,'/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[3]/td[2]/input',self.uasg)
         sel.enterField(self,'/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[4]/td[2]/input',self.pregao)
-        sel.buttonClick(self,'/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[7]/td/input[3]')
-        sel.buttonClick(self,'/html/body/table/tbody/tr[2]/td/table[2]/tbody/tr[2]/td[2]/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td[1]/a')
+        sel.clicar_xpath(self,'/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[7]/td/input[3]')
+        sel.clicar_xpath(self,'/html/body/table/tbody/tr[2]/td/table[2]/tbody/tr[2]/td[2]/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td[1]/a')
 
     def registrar_proposta(self):
         return
@@ -76,8 +67,8 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         self.sel_driver = sel_driver
         self.abrir_pasta_cotacao(self)
         self.ler_planilha_cotacao(self)
-        self.abrir_disputa(self)
-        self.reconhecer_disputa(self)
+        if(self.abrir_disputa(self)):
+            self.reconhecer_disputa(self)
         #self.extrair_relatorio(self)
         return
 
@@ -110,28 +101,33 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         print(self.itens)     
 
     def abrir_disputa(self):
-        sel.buttonClick(self,'/html/body/div[1]/ul/li[2]/a')
-        tabela = sel.getElements(self,'/html/body/table/tbody/tr[2]/td/table[2]/tbody/tr[3]/td[2]/table/tbody/tr')
+        sel.clicar_xpath(self,'/html/body/div[1]/ul/li[2]/a')
+        tabela = sel.obter_elementos_xpath(self,'/html/body/table/tbody/tr[2]/td/table[2]/tbody/tr[3]/td[2]/table/tbody/tr')
         del tabela[0]
-        for linha in tabela:
-            colunas = linha.find_elements_by_xpath('./td')
-            codpregao = colunas[1].text
-            coduasg = colunas[2].text
-            if((codpregao == self.pregao) and (coduasg == self.uasg)):
-                colunas[0].click()
-        time.sleep(5)
-        self.janela_pregoes = self.sel_driver.window_handles[0]
-        self.janela_disputa = self.sel_driver.window_handles[1]
-        self.sel_driver.switch_to.window(self.janela_disputa)
+        if(len(tabela[0].find_elements_by_xpath('./*'))>1):
+            for linha in tabela:
+                colunas = linha.find_elements_by_xpath('./td')
+                codpregao = colunas[1].text
+                coduasg = colunas[2].text
+                if((codpregao == self.pregao) and (coduasg == self.uasg)):
+                    colunas[0].click()
+            time.sleep(5)
+            self.janela_pregoes = self.sel_driver.window_handles[0]
+            self.janela_disputa = self.sel_driver.window_handles[1]
+            self.sel_driver.switch_to.window(self.janela_disputa)
+            return True
+        else:
+            print('Não foram encontradas disputas em andamento.')
+            return False
         
     def reconhecer_disputa(self):
-        self.modo_disputa = sel.getElement(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[4]/div[1]/app-identificacao-compra/div/span').text
-        self.navegacao_itens = sel.getElements(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/ul/li')
+        self.modo_disputa = sel.obter_elemento_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[4]/div[1]/app-identificacao-compra/div/span').text
+        self.navegacao_itens = sel.obter_elementos_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/ul/li')
         for botao in self.navegacao_itens:
             print(botao.text)
         if(self.navegacao_itens[1].text != 'Em disputa'):
             self.navegacao_itens[1].click()
-            itens_em_disputa = sel.getElements(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[2]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div/div')
+            itens_em_disputa = sel.obter_elementos_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[2]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div/div')
             print(len(itens_em_disputa))
             for item in itens_em_disputa:
                 codigo_item = str(item.find_element_by_xpath('./div[1]/div[1]/div[1]/div[1]/span[1]').text)
@@ -146,7 +142,7 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
     
     def extrair_relatorio(self):
         self.navegacao_itens[2].click()
-        itens_encerrados = sel.getElements(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[3]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div/div')
+        itens_encerrados = sel.obter_elementos_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[3]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div/div')
         self.resultado_por_item = []
         for item in itens_encerrados:
             aux_item = []

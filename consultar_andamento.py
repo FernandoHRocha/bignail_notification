@@ -41,11 +41,11 @@ class andamento():
             print("Planilha de controle recriada.")
     
     def verificar_anexos(self):
-        sel.newWindowClick(self,'/html/body/div[1]/ul/li[11]/a')
+        sel.clicar_nova_janela_xpath(self,'/html/body/div[1]/ul/li[11]/a')
         time.sleep(0.2)
         windowToClose = self.sel_driver.window_handles[1]
         self.sel_driver.switch_to.window(windowToClose)
-        table = sel.getElements(self,'/html/body/div[1]/form/table/tbody/tr[5]/td[2]/table/tbody/*')
+        table = sel.obter_elementos_xpath(self,'/html/body/div[1]/form/table/tbody/tr[5]/td[2]/table/tbody/*')
         del table[0]
         if(table[0].text == "No momento não existem pregões para enviar anexos."):
             print('Sem envio de anexos pendente')
@@ -59,8 +59,8 @@ class andamento():
         self.sel_driver.switch_to.window(self.sel_mainWindow)
     
     def varrer_pregoes(self):
-        sel.switchFrame(self,'/html/frameset/frameset/frame')
-        sel.buttonClick(self,'/html/body/div[1]/ul/li[4]/a')
+        sel.trocar_frame(self,'/html/frameset/frameset/frame')
+        sel.clicar_xpath(self,'/html/body/div[1]/ul/li[4]/a')
 
         nail = atualizar_lista_pregoes(self)
 
@@ -91,15 +91,15 @@ class andamento():
 
     def ler_pregao(self, linka, sheet, exist):
         sel_mainWindow = self.sel_driver.window_handles[0]
-        sel.clicar_elemento_nova_janela(self, linka)
+        sel.clicar_nova_janela_elemento(self, linka)
         time.sleep(1)
         windowToClose = self.sel_driver.window_handles[1]
         self.sel_driver.switch_to.window(windowToClose)
-        sel.buttonClick(self,'/html/body/div[1]/table/tbody/tr[6]/td[2]/input')
+        sel.clicar_xpath(self,'/html/body/div[1]/table/tbody/tr[6]/td[2]/input')
         self.sel_driver.close()
         sel_windowToClose = self.sel_driver.window_handles[1]
         self.sel_driver.switch_to.window(sel_windowToClose)
-        table = sel.getElements(self,'/html/body/table[2]/tbody/*')
+        table = sel.obter_elementos_xpath(self,'/html/body/table[2]/tbody/*')
         sh = self.excel_read[sheet]
         if(exist):
             msg = table[0].find_elements_by_xpath('./*')
@@ -145,8 +145,8 @@ class andamento():
         return
 
 def atualizar_lista_pregoes(self):
-    sel.switchFrame(self,'/html/frameset/frameset/frame')
-    table = sel.getElements(self,'/html/body/div[1]/table/tbody/tr[5]/td[2]/table/tbody/*')
+    sel.trocar_frame(self,'/html/frameset/frameset/frame')
+    table = sel.obter_elementos_xpath(self,'/html/body/div[1]/table/tbody/tr[5]/td[2]/table/tbody/*')
     del table[0]
     def_nail = []
     for index in table:
