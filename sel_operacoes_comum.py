@@ -21,7 +21,7 @@ def enterFieldElement(element, text):
     time.sleep(sel_delay)
 
 def clicar_xpath(self, path):
-    button = WebDriverWait(self.sel_driver,1).until(expected_conditions.element_to_be_clickable((By.XPATH,path)))
+    button = WebDriverWait(self.sel_driver,2).until(expected_conditions.element_to_be_clickable((By.XPATH,path)))
     button.click()
 
 def trocar_frame(self, path):
@@ -49,11 +49,10 @@ def clicar_nova_janela_xpath(self, path):
     action.perform()
 
 def clicar_nova_janela_elemento(self, elemento):
-    action = ActionChains(self.sel_driver).key_down(Keys.SHIFT)
-    action.perform()
-    elemento.click()
-    action = ActionChains(self.sel_driver).key_up(Keys.SHIFT)
-    action.perform()
+    href = elemento.get_attribute('href')
+    if(href == None):
+        href = elemento.find_element_by_xpath('./a').get_attribute('href')
+    self.sel_driver.execute_script("window.open('"+href+"');")
 
 def fechar_popup(self):
     self.sel_mainWindow = self.sel_driver.window_handles[0]
@@ -94,4 +93,5 @@ def acessar_menu_comprasnet(self):
             break
         except:
             self.sel_driver.refresh()
+            time.sleep(0.2)
             fechar_popup(self)
