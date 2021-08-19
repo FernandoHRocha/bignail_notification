@@ -4,4 +4,5 @@ package-lock.json
 /__pycache__/
 notificacoes.xlsx
 COTACAO.xlsx
+~$COTACAO.xlsx
 sel_operacoes_comum.py

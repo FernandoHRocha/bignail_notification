@@ -7,6 +7,16 @@ import os
 sel_delay=0.5
 sel_driver = ''
 
+def abrir_pasta_cotacao():
+    print('A planilha de cotação já está na pasta? O nome do arquivo deve ser "COTACAO.xlsx"')
+    print('1 - Abrir a pasta.')
+    print('2 - A planilha já está na pasta.')
+    escolha = input('>')
+    if(escolha == '1'):
+        path = 'C:/Fernando/LOJA/outros/twilio/bignail_notification'
+        path = os.path.realpath(path)
+        os.startfile(path)
+
 class ComprasNet:#LEVA A APLICAÇÃO ATÉ UM LUGAR EM COMUM DENTRO DO COMPRASNET E MOSTRA AS OPÇÕES DE OPERAÇÕES
 
     def iniciar(self):
@@ -29,6 +39,7 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
 
     def iniciar(self):
         self.sel_driver = sel_driver
+        abrir_pasta_cotacao()
         self.ler_planilha_cotacao(self)
         self.acessar_cadastro(self)
         self.registrar_proposta(self)
@@ -54,7 +65,6 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
                     rowItens.append(wb.cell(row,col).value)
             itens.append(rowItens)
         self.itens = itens
-        print(itens)
 
     def acessar_cadastro(self):
         sel.clicar_xpath(self,'/html/body/div[1]/ul/li[1]/a')
@@ -65,29 +75,27 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         sel.clicar_xpath(self,'/html/body/table/tbody/tr[2]/td/table[2]/tbody/tr[2]/td[2]/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td[1]/a')
 
     def registrar_proposta(self):
-        
+        tabela = sel.obter_elementos_xpath(self,'/html/body/center/table[2]/tbody/tr[4]/td/center[2]/table/tbody/tr')
+        del tabela[0]
+        print(len(tabela))
+        item_registrar = []
+        if(len(tabela)==40):
+            for n in range(0,len(tabela)):
+                item_auxiliar = []
+                #item = tabela[n].find_element_by_class('tex3b')
+                #print(item)
         return
 
 class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
 
     def iniciar(self):
         self.sel_driver = sel_driver
-        self.abrir_pasta_cotacao(self)
+        abrir_pasta_cotacao()
         self.ler_planilha_cotacao(self)
         if(self.abrir_disputa(self)):
             self.reconhecer_disputa(self)
         #self.extrair_relatorio(self)
         return
-
-    def abrir_pasta_cotacao(self):
-        print('A planilha de cotação já está na pasta? O nome do arquivo deve ser "COTACAO.xlsx"')
-        print('1 - Abrir a pasta.')
-        print('2 - A planilha já está na pasta.')
-        escolha = input('>')
-        if(escolha == '1'):
-            path = 'C:/Fernando/LOJA/outros/twilio/bignail_notification'
-            path = os.path.realpath(path)
-            os.startfile(path)
 
     def ler_planilha_cotacao(self):
         wb = openpyxl.load_workbook('COTACAO.xlsx', data_only=True)['Controle']
