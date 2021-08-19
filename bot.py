@@ -31,24 +31,30 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         self.sel_driver = sel_driver
         self.ler_planilha_cotacao(self)
         self.acessar_cadastro(self)
+        self.registrar_proposta(self)
         return
     
     def ler_planilha_cotacao(self):
         wb = openpyxl.load_workbook('COTACAO.xlsx', data_only=True)['Controle']
         self.pregao = wb.cell(2,1).value
         self.uasg = wb.cell(2,2).value
+        self.abertura = wb.cell(2,3).value
+        self.hora = wb.cell(2,4).value
+        self.inserir_orgao = wb.cell(2,5).value
         wb = openpyxl.load_workbook('COTACAO.xlsx', data_only=True)['Planilha1']
         itens=[]
         for row in range(2,wb.max_row):
             rowItens=[]
-            colunas_interesse=[1,2,3,4,9,13]
-            colunas_monetarias =[3,9]
+            colunas_interesse=[1,2,3,4,5]
+            colunas_monetarias =[4]
             for col in colunas_interesse:
                 if(col in colunas_monetarias):
                     rowItens.append(round(wb.cell(row,col).value,2))
                 else:
                     rowItens.append(wb.cell(row,col).value)
             itens.append(rowItens)
+        self.itens = itens
+        print(itens)
 
     def acessar_cadastro(self):
         sel.clicar_xpath(self,'/html/body/div[1]/ul/li[1]/a')
@@ -59,6 +65,7 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         sel.clicar_xpath(self,'/html/body/table/tbody/tr[2]/td/table[2]/tbody/tr[2]/td[2]/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td[1]/a')
 
     def registrar_proposta(self):
+        
         return
 
 class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
@@ -157,7 +164,7 @@ bot.iniciar()
 #bot.ler_planilha_cotacao()
 
 #bot = Registrar()
-#bot.ler_planilha_cotacao()
+#bot.iniciar()
 exit()
     
 def disputa():
