@@ -63,6 +63,7 @@ def fechar_popup(self):
     self.sel_driver.switch_to.window(self.sel_mainWindow)
 
 def configurar_webdriver(self):
+    print('Automação em desenvolvimento por Fernando H. Rocha, em uso na empresa Brainpro Tecnologia.')
     self.options = webdriver.ChromeOptions()
     self.options.add_argument ('--headless')
     self.options.add_argument('--log-level=3')

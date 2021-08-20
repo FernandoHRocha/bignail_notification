@@ -1,3 +1,4 @@
+from selenium.webdriver.common.keys import Keys
 import sel_operacoes_comum as sel
 import conversor
 import openpyxl
@@ -16,6 +17,28 @@ def abrir_pasta_cotacao():
         path = 'C:/Fernando/LOJA/outros/twilio/bignail_notification'
         path = os.path.realpath(path)
         os.startfile(path)
+
+def converter_texto_para_decimal(texto):
+    texto = float(texto.replace("R$","").strip().replace(".","").replace(",","."))
+    return "{:.2f}".format(texto)
+
+def converter_intervalo_lances(intervalo):
+    padrao1 = 'Intervalo mínimo entre lances: R$ '
+    if padrao1 in intervalo:
+        intervalo = intervalo.replace(padrao1,"")
+        return converter_texto_para_decimal(intervalo)
+
+def converter_tempo_restante(tempo):
+    tempo = tempo.split(":")
+    return int(tempo[1])+(int(tempo[0])*60)
+
+def enviar_lance(self, item, valor):
+    valor = str(valor).replace('.',',')
+    sel.enterFieldElement(item['input'],valor)
+    item['botao_confirma'].click()
+    sel.obter_elemento_xpath(self,'/html/body/modal-container/div/div/app-dialog-confirmacao/div/div/div[3]/div/div[2]/button').click()
+    print('lance enviado')
+    return
 
 class ComprasNet:#LEVA A APLICAÇÃO ATÉ UM LUGAR EM COMUM DENTRO DO COMPRASNET E MOSTRA AS OPÇÕES DE OPERAÇÕES
 
@@ -113,7 +136,7 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
                 else:
                     rowItens.append(wb.cell(row,col).value)
             self.itens.append(rowItens)
-        print(self.itens)     
+        print(self.itens)
 
     def abrir_disputa(self):
         sel.clicar_xpath(self,'/html/body/div[1]/ul/li[2]/a')
@@ -135,26 +158,63 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
             print('Não foram encontradas disputas em andamento.')
             return False
         
-    def reconhecer_disputa(self):
+    def reconhecer_disputa(self):#COLOCAR UMA ESTRUTURA DE REPETIÇÃO PARA CONTINUAR ATÉ QUE A DISPUTA ENCERRE
         self.modo_disputa = sel.obter_elemento_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[4]/div[1]/app-identificacao-compra/div/span').text
         self.navegacao_itens = sel.obter_elementos_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/ul/li')
+        print(self.modo_disputa)
         for botao in self.navegacao_itens:
             print(botao.text)
         if(self.navegacao_itens[1].text != 'Em disputa'):
             self.navegacao_itens[1].click()
+            self.reconhecer_itens_disputa(self)  
+
+    def reconhecer_itens_disputa(self):
+        while(True):
             itens_em_disputa = sel.obter_elementos_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[2]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div/div')
-            print(len(itens_em_disputa))
+            print("Itens em fase de disputa de lances: "+str(len(itens_em_disputa)))
             for item in itens_em_disputa:
+                item_disputa = {}
                 codigo_item = str(item.find_element_by_xpath('./div[1]/div[1]/div[1]/div[1]/span[1]').text)
-                melhor_valor = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[1]/div[2]/div[1]').text)
+                atual_valor = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[1]/div[2]/div[1]').text)
                 nosso_valor = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[1]/div[2]/div[2]').text)
-                print(codigo_item)
-                print(melhor_valor)
-                print(nosso_valor)
+                tempo_restante = str(item.find_element_by_xpath('./div[1]/div[2]/div/div[2]/span/span').text)
+                intervalo_lances = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[2]/span/small').text)
+                input = item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[1]/input')
+                botao_confirma = item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[1]/div/button/u')
+                menu_lances = item.find_element_by_xpath('./div[2]/div[2]/div/app-botao-icone/span/button/i')
+                item_disputa = {
+                    'item':codigo_item,
+                    'atual_valor':atual_valor,
+                    'nosso_valor':nosso_valor,
+                    'tempo_restante':tempo_restante,
+                    'intervalo_lances':converter_intervalo_lances(intervalo_lances),
+                    'input':input,
+                    'botao_confirma':botao_confirma,
+                    'menu_lances':menu_lances,
+                }
+                self.decidir_lance(self,item_disputa)
                 #CONSEGUE LER DURANTE A DISPUTA ABERTA E DISPURA FECHADA NÃO CONVOCADO
             return
+
+    def decidir_lance(self,item):
+        for cotado in self.itens:
+            if(str(cotado[0]) == str(item['item'])):
+                melhor = converter_texto_para_decimal(item['melhor_valor'])
+                nosso = converter_texto_para_decimal(item['nosso_valor'])
+                tempo = converter_tempo_restante(item['tempo_restante'])
+                intervalo = converter_intervalo_lances(item['intervalo_lances'])
+                print(melhor)
+                print(nosso)
+                print(tempo)
+                if(tempo < 120):
+                    if( melhor > nosso):
+                        valor = melhor - intervalo
+                        #enviar_lance(self,item,valor)
+                    print('Nosso mínimo é R$ '+ nosso)
+                    print('Preço atual é R$ ' + melhor)
+                return
         return
-    
+
     def extrair_relatorio(self):
         self.navegacao_itens[2].click()
         itens_encerrados = sel.obter_elementos_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[3]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div/div')
