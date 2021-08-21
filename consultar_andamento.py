@@ -18,7 +18,6 @@ class andamento():
     
     def iniciar(self):
         self.verificar_planilha_controle()
-        print("Varredura iniciada.")
         sel.configurar_webdriver(self)
         sel.coletar_credenciais_acessar_sistema(self)
         sel.acessar_menu_comprasnet(self)

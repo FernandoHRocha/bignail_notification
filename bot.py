@@ -1,6 +1,4 @@
-from selenium.webdriver.common.keys import Keys
 import sel_operacoes_comum as sel
-import conversor
 import openpyxl
 import time
 import os
@@ -8,15 +6,20 @@ import os
 sel_delay=0.5
 sel_driver = ''
 
-def abrir_pasta_cotacao():
+def abrir_pasta():
+    path = 'C:/Fernando/LOJA/outros/twilio/bignail_notification'
+    path = os.path.realpath(path)
+    os.startfile(path)
+
+def oferecer_abrir_pasta():#OFERECE A OPÇÃO DE ABRIR A PASTA QUE DEVERÁ CONTER AS PLANILHAS CONTROLE E COTAÇÃO
     print('A planilha de cotação já está na pasta? O nome do arquivo deve ser "COTACAO.xlsx"')
     print('1 - Abrir a pasta.')
     print('2 - A planilha já está na pasta.')
     escolha = input('>')
     if(escolha == '1'):
-        path = 'C:/Fernando/LOJA/outros/twilio/bignail_notification'
-        path = os.path.realpath(path)
-        os.startfile(path)
+        abrir_pasta()
+        print('Aguardando para continuar.')
+        escolha = input('>')
 
 def converter_texto_para_decimal(texto):
     texto = float(texto.replace("R$","").strip().replace(".","").replace(",","."))
@@ -62,32 +65,63 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
 
     def iniciar(self):
         self.sel_driver = sel_driver
-        abrir_pasta_cotacao()
+        oferecer_abrir_pasta()
         self.ler_planilha_cotacao(self)
         self.acessar_cadastro(self)
-        self.registrar_proposta(self)
+        self.identificar_pagina_registro(self)
         return
     
     def ler_planilha_cotacao(self):
         wb = openpyxl.load_workbook('COTACAO.xlsx', data_only=True)['Controle']
-        self.pregao = wb.cell(2,1).value
-        self.uasg = wb.cell(2,2).value
-        self.abertura = wb.cell(2,3).value
-        self.hora = wb.cell(2,4).value
-        self.inserir_orgao = wb.cell(2,5).value
+        self.pregao = str(wb.cell(2,1).value)
+        self.uasg = str(wb.cell(2,2).value)
+        self.abertura = str(wb.cell(2,3).value)
+        self.hora = str(wb.cell(2,4).value)
+        self.inserir_orgao = str(wb.cell(2,5).value)
         wb = openpyxl.load_workbook('COTACAO.xlsx', data_only=True)['Planilha1']
         itens=[]
         for row in range(2,wb.max_row):
-            rowItens=[]
+            auxiliar_item_linha=[]
             colunas_interesse=[1,2,3,4,5]
             colunas_monetarias =[4]
             for col in colunas_interesse:
                 if(col in colunas_monetarias):
-                    rowItens.append(round(wb.cell(row,col).value,2))
+                    valor = str(round(wb.cell(row,col).value,2))
+                    if(len(valor.split('.'))<2):
+                        valor = valor + '.00'
+                    elif(len(valor.split('.')[1])<2):
+                        valor = valor.split('.')[0]+'.'+valor.split('.')[1]+'0'
+                    auxiliar_item_linha.append(str(valor).replace('.',','))
                 else:
-                    rowItens.append(wb.cell(row,col).value)
-            itens.append(rowItens)
-        self.itens = itens
+                    auxiliar_item_linha.append(str(wb.cell(row,col).value))
+            valor = str(round(round(wb.cell(row,4).value,2)*int(wb.cell(row,5).value),2))
+            if(len(valor.split('.'))<2):
+                    valor = valor + '.00'
+            elif(len(valor.split('.')[1])<2):
+                valor = valor.split('.')[0]+'.'+valor.split('.')[1]+'0'
+            auxiliar_item_linha.append(str(valor).replace('.',','))
+            itens.append(auxiliar_item_linha)
+        self.itens_cotacao = itens
+        #print(self.itens_cotacao)
+        # self.itens_cotacao[0] IDENTIFICADOR
+        # self.itens_cotacao[1] DESCRIÇÃO
+        # self.itens_cotacao[2] MARCA
+        # self.itens_cotacao[3] VALOR UNITÁRIO
+        # self.itens_cotacao[4] QUANTIDADE OFERTADA
+        # self.itens_cotacao[5] QUANTIDADE TOTAL
+
+        while(True):
+            print('O cadatro será realizado para o pregão: '+self.pregao+' do uasg: '+self.uasg)
+            print('1 - Continuar.')
+            print('2 - Abrir pasta de cotação para alterar a planilha de cotação.')
+            choose = input('>')
+            if(choose == '1'):
+                break
+            elif(choose == '2'):
+                abrir_pasta()
+                input('>')
+                self.ler_planilha_cotacao()
+                break
 
     def acessar_cadastro(self):
         sel.clicar_xpath(self,'/html/body/div[1]/ul/li[1]/a')
@@ -97,23 +131,77 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         sel.clicar_xpath(self,'/html/body/form/table/tbody/tr[2]/td/table[2]/tbody/tr[4]/td[2]/table/tbody/tr/td/table/tbody/tr[7]/td/input[3]')
         sel.clicar_xpath(self,'/html/body/table/tbody/tr[2]/td/table[2]/tbody/tr[2]/td[2]/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td[1]/a')
 
-    def registrar_proposta(self):
+    def identificar_pagina_registro(self):
         tabela = sel.obter_elementos_xpath(self,'/html/body/center/table[2]/tbody/tr[4]/td/center[2]/table/tbody/tr')
         del tabela[0]
-        print(len(tabela))
         item_registrar = []
-        if(len(tabela)==40):
-            for n in range(0,len(tabela)):
-                item_auxiliar = []
-                #item = tabela[n].find_element_by_class('tex3b')
-                #print(item)
-        return
+        if(len(tabela)==40):#PODEM HAVER CONFIGURAÇÕES DIFERENTES
+
+            for item_cotado in self.itens_cotacao:
+                #ITENS EM COTAÇÃO EM ORDEM CRESCENTE DE IDENTIFICAÇÃO DO ITEM
+                #PARA CADA ITEM EM COTAÇÃO, SERÁ BUSCADO O ITEM NA PÁGINA DE RESGISTRO E MUDANDO DE PÁGINA ATÉ ENCONTRAR O ITEM E REMOVE-LO DA LISTA
+                item_pendente = True
+                while(item_pendente):
+                    tabela = sel.obter_elementos_xpath(self,'/html/body/center/table[2]/tbody/tr[4]/td/center[2]/table/tbody/tr')
+                    del tabela[0]
+                    itens = []
+                    while(True):#ARRANJA OS CAMPOS DOS ITENS EM APENAS UM ELEMENTO DENTRO DA LISTA
+                        item_aux = []
+                        item_aux.append(tabela.pop(0))
+                        item_aux.append(tabela.pop(0))
+                        item_aux.append(tabela.pop(0))
+                        item_aux.append(tabela.pop(0))
+                        itens.append(item_aux)
+                        if(len(tabela)<1):
+                            break
+
+                    item_registrar = []
+                    for item_registrar in itens:#PROCURA ITEM A ITEM
+                        identificador = item_registrar[0].find_element_by_css_selector('.tex3b').text#IDENTIFICAÇÃO DO ITEM
+                        if(identificador == item_cotado[0]):
+                            item_pendente = False
+                            self.preencher_item_registrar(item_cotado = item_cotado, item_registrar = item_registrar)
+                    if(item_pendente):#CASO O ITEM NÃO TENHA SIDO ENCONTRADO, PROSSEGUIMOS PARA A PRÓXIMA PÁGINA
+                        sel.obter_elemento_id(self,'proximas').click()
+
+    def preencher_item_registrar(item_registrar,item_cotado):
+        for entrada in item_registrar[0].find_elements_by_tag_name('input'):#ENTRADAS DE DADOS REFERENTES A QUANTIDADE E VALORES
+            if(entrada.is_displayed() and entrada.is_enabled()):
+                if(str(entrada.get_attribute('name')) == 'qtdOfertada'):
+                    sel.enterFieldElement(entrada,item_cotado[4])
+                if(str(entrada.get_attribute('name')) == 'valorunit'):
+                    sel.enterFieldElement(entrada,item_cotado[3])
+                if(str(entrada.get_attribute('name')) == 'valorprp'):
+                    sel.enterFieldElement(entrada,item_cotado[5])
+                #print(entrada.get_attribute('name'))
+                #qtdOfertada
+                #valorunit
+                #valorprp
+        for entrada in item_registrar[1].find_elements_by_tag_name('input'):#ENTRADAS DE DADOS REFERENTES A MARCA MODELO
+            if(entrada.is_displayed() and entrada.is_enabled()):
+                if(str(entrada.get_attribute('name')) == 'MarcaFornec'):
+                    sel.enterFieldElement(entrada,item_cotado[2])
+                if(str(entrada.get_attribute('name')) == 'FabriFornec'):
+                    sel.enterFieldElement(entrada,item_cotado[2])
+                if(str(entrada.get_attribute('name')) == 'ModVerFornec'):
+                    sel.enterFieldElement(entrada,item_cotado[2])
+                #print(entrada.get_attribute('name'))
+                #MarcaFornec
+                #FabriFornec
+                #ModVerFornec
+        for entrada in item_registrar[2].find_elements_by_tag_name('textarea'):#ENTRADAS DE DADOS REFERENTES A DESCRIÇÃO
+            if(entrada.is_displayed() and entrada.is_enabled()):
+                if(str(entrada.get_attribute('name')) == 'DescrFornec'):
+                    sel.enterFieldElement(entrada,item_cotado[1])
+                #print(entrada.get_attribute('name'))
+                #DescrFornec
+
 
 class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
 
     def iniciar(self):
         self.sel_driver = sel_driver
-        abrir_pasta_cotacao()
+        oferecer_abrir_pasta()
         self.ler_planilha_cotacao(self)
         if(self.abrir_disputa(self)):
             self.reconhecer_disputa(self)
@@ -232,101 +320,10 @@ bot.iniciar()
 #bot.ler_planilha_cotacao()
 
 #bot = Registrar()
-#bot.iniciar()
-exit()
-    
-def disputa():
-    itens_disputa=[]
-    print('Inserir a planilha de planejamento com o nome COTACAO.xlsx.')
-    print('1 - Abrir a pasta.')
-    print('ENTER - Seguir sem abrir.')
-    choose = input('>')
-    if(choose == '1'):
-        path = 'C:/Fernando/LOJA/outros/twilio/bignail_notification'
-        path = os.path.realpath(path)
-        os.startfile(path)
-    pregao_numero = str(dados_cotacao.import_numero())
-    pregao_uasg = str(dados_cotacao.import_uasg())
-    print('Participar do pregão Nº '+pregao_numero+' UASG: '+pregao_uasg)
-    sel_switchFrame('//*[@id="corpo"]/frame')
-    sel_buttonClick('/html/body/div[1]/ul/li[2]/a')
-    #sel_buttonClick('/html/body/div[1]/ul/li[2]/a')
-    table = sel_getElement('/html/body/table/tbody/tr[2]/td/table[2]/tbody/tr[3]/td[2]/table/tbody')
-    rows = table.find_elements_by_xpath('./*')
-    infos = rows[1].find_elements_by_xpath('./*')
-    if(len(infos) == 1):
-        print('Nenhum pregão está em fase de disputa de lances no momento.')
-    else:
-        for row in rows:
-            if(row != rows[0]):
-                print('Temos 1 pregão em andamento do orgão: ' + infos[3].text + '\nnº ' + infos[1].text + ' UASG: ' + infos[2].text)
-                print('1 - Entrar na disputa')
-                print('2 - Ver o próximo')
-                choose = input('>')
-                if(choose == '1'):
-                    itens_cotados = dados_cotacao.import_items()
-                    infos[0].click()
-                    sel_mainWindow = sel_driver.window_handles[0]
-                    sel_fightWindow = sel_driver.window_handles[1]
-                    sel_driver.switch_to.window(sel_fightWindow)
-                    time.sleep(0.5)
-                    try:
-                        warning = sel_getElement('/html/body/modal-container')
-                        sel_buttonClick('/html/body/modal-container/div/div/app-dialog-confirmacao/div/div/div[3]/div/div/button')
-                        print('O pregão está encerrado e deve ser acessado pelo página de acompanhamento.')
-                    except:
-                        print('O pregão está em andamento.')
-                    finally:
-                        print('Os itens disputados estão:')
-                    aguardando = sel_getElement('/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/ul/li[1]/a')
-                    disputa = sel_getElement('/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/ul/li[2]/a')
-                    encerrados = sel_getElement('/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/ul/li[3]')
-                    print(aguardando.text + "\n" +disputa.text + "\n"+ encerrados.text)
-                    if(aguardando.text != 'Aguardando disputa'):
-                        aguardando.click()
-                        table = sel_getElement('/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[1]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div')
-                        items = table.find_elements_by_xpath('./div')
-                        print(str(len(items))+' aguardando disputa: ')
-                        for item in items:
-                            nome = item.find_elements_by_xpath('./div')
-                            #print(nome.text)
-                    if(disputa.text != 'Em disputa'):
-                        disputa.click()
-                        #DESVINCULAR
-                        table = sel_getElement('/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[2]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div')
-                        items = table.find_elements_by_xpath('./div')
-                        print(str(len(items))+' em disputa de lances: ')
-                        for item in items:
-                            item_aux = []
-                            numero = item.find_elements_by_xpath('./div/div/div/div/span')[0].text
-                            nome = item.find_elements_by_xpath('./div/div/div/div/span')[1].text
-                            melhor_valor = item.find_element_by_xpath('./div[2]/div/div[2]/div/div/div[2]/div[1]').text
-                            meu_valor = item.find_element_by_xpath('./div[2]/div/div[2]/div/div/div[2]/div[2]').text
-                            tempo = item.find_element_by_xpath('./div/div[2]/div/div[2]').text
-                            entrada_dados = item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[1]/input').text
-                            intervalo = item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[2]').text
-                            melhor_valor = conversor.monetario(melhor_valor)
-                            meu_valor = conversor.monetario(meu_valor)
-                            tempo = conversor.temporizador(tempo)
-                            intervalo = conversor.intervalo(intervalo, melhor_valor)
-                            item_aux.append(numero)
-                            item_aux.append(nome)
-                            item_aux.append(melhor_valor)
-                            item_aux.append(meu_valor)
-                            item_aux.append(tempo)
-                            item_aux.append(entrada_dados)
-                            item_aux.append(intervalo)
-                            itens_disputa.append(item_aux)
-                            #disputar(itens_disputa,itens_cotados)
-                        print(itens_cotados)
-                        print(itens_disputa)
-                    if(encerrados.text != 'Encerrados'):
-                        encerrados.click()
-                        table = sel_getElement('/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[3]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div')
-                        items = table.find_elements_by_xpath('./div')
-                        print(str(len(items))+' encerrados: ')
-
+#bot.ler_planilha_cotacao()
 
 def fechar_webdriver(self):
     choose = input('>')
     self.sel_driver.close()
+
+fechar_webdriver(bot)

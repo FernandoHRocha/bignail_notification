@@ -37,6 +37,10 @@ def obter_elemento_xpath(self, path):
     el = WebDriverWait(self.sel_driver,sel_wait).until(expected_conditions.presence_of_element_located((By.XPATH,path)))
     return el
 
+def obter_elemento_id(self, id):
+    el = WebDriverWait(self.sel_driver,sel_wait).until(expected_conditions.presence_of_element_located((By.ID,id)))
+    return el
+
 def obter_elementos_xpath(self, path):
     el = WebDriverWait(self.sel_driver,sel_wait).until(expected_conditions.presence_of_all_elements_located((By.XPATH,path)))
     return el
@@ -63,13 +67,13 @@ def fechar_popup(self):
     self.sel_driver.switch_to.window(self.sel_mainWindow)
 
 def configurar_webdriver(self):
-    print('Automação em desenvolvimento por Fernando H. Rocha, em uso na empresa Brainpro Tecnologia.')
-    self.options = webdriver.ChromeOptions()
-    self.options.add_argument ('--headless')
-    self.options.add_argument('--log-level=3')
-    self.options.add_argument('--disable-notifications')
-    self.sel_driver = webdriver.Chrome("chromedriver.exe", options=self.options)
-    #self.sel_driver.maximize_window()
+    print('Brainpro Tecnologia - Automação por Fernando H Rocha')
+    options = webdriver.ChromeOptions()
+    #options.add_argument ('--headless')
+    options.add_argument('--log-level=3')
+    options.add_argument('--disable-notifications')
+    self.sel_driver = webdriver.Chrome("chromedriver.exe", options=options)
+    self.sel_driver.maximize_window()
     endereco_comprasnet=dados.pregao_address
     self.sel_driver.get(endereco_comprasnet)
 
