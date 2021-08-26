@@ -5,6 +5,9 @@ import os
 
 sel_delay=0.5
 sel_driver = ''
+net_aguardando = 'Aguardando disputa'
+net_disputa = 'Em disputa'
+net_encerrado = 'Encerrados'
 
 def abrir_pasta():
     path = 'C:/Fernando/LOJA/outros/twilio/bignail_notification'
@@ -250,50 +253,49 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         self.modo_disputa = sel.obter_elemento_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[4]/div[1]/app-identificacao-compra/div/span').text
         self.navegacao_itens = sel.obter_elementos_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/ul/li')
         
-        while(True):
-            if(self.navegacao_itens[0].text != 'Aguardando' or self.navegacao_itens[1].text != 'Em disputa'):
-                if(self.navegacao_itens[1].text != 'Em disputa'):
+        while(True):#CICLO DE REPETIÇÃO ATÉ QUE NÃO HAJA ITENS EM DISPUTA E AGUARDANDO
+            if(self.navegacao_itens[0].text != net_aguardando or self.navegacao_itens[1].text != net_disputa):
+                if(self.navegacao_itens[1].text != net_disputa):
                     self.navegacao_itens[1].click()
                     self.reconhecer_itens_disputa(self)#COMEÇAR O CICLO DE DISPUTA DE LANCES
-                elif(self.navegacao_itens[0].text != 'Aguardando'):
+                elif(self.navegacao_itens[0].text != net_aguardando):
+                    self.navegacao_itens[0].click()
                     aguardando = True
-                    while(aguardando):
-                        if(self.navegacao_itens[1].text != 'Em disputa'):
+                    while(aguardando):#CICLO DE ESPERA ATÉ QUE ALGUM ITEM AGUARDANDO ENTRE EM FASE DE LANCES
+                        if(self.navegacao_itens[1].text != net_disputa):
                             aguardando=False
                         else:
                             time.sleep(5)
             else:
+                #EXTRAIR RELATÓRIO FINAL DA DISPUTA
                 break
         
 
     def reconhecer_itens_disputa(self):
-        while(True):
-            itens_em_disputa = sel.obter_elementos_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[2]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div/div')
-            itens_reconhecidos = []
-            for item in itens_em_disputa:
-                item_disputa = {}
-                codigo_item = str(item.find_element_by_xpath('./div[1]/div[1]/div[1]/div[1]/span[1]').text)
-                atual_valor = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[1]/div[2]/div[1]').text)
-                nosso_valor = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[1]/div[2]/div[2]').text)
-                tempo_restante = str(item.find_element_by_xpath('./div[1]/div[2]/div/div[2]/span/span').text)
-                intervalo_lances = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[2]/span/small').text)
-                input = item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[1]/input')
-                botao_confirma = item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[1]/div/button/u')
-                menu_lances = item.find_element_by_xpath('./div[2]/div[2]/div/app-botao-icone/span/button/i')
-                item_disputa = {
-                    'item':codigo_item,
-                    'atual_valor':atual_valor,
-                    'nosso_valor':nosso_valor,
-                    'tempo_restante':tempo_restante,
-                    'intervalo_lances':converter_intervalo_lances(intervalo_lances),
-                    'input':input,
-                    'botao_confirma':botao_confirma,
-                    'menu_lances':menu_lances,
-                }
-                itens_reconhecidos.append(item_disputa)
-            self.itens_reconhecidos = itens_reconhecidos
+        itens_em_disputa = sel.obter_elementos_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[2]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div/div')
+        for item in itens_em_disputa:#CONFERIR QUAL O ESTADO DA DISPUTA (ETAPA ABERTA - ETAPA FECHADA - FINALIZADO)
+            item_disputa = {}
+            codigo_item = str(item.find_element_by_xpath('./div[1]/div[1]/div[1]/div[1]/span[1]').text)
+            atual_valor = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[1]/div[2]/div[1]').text)
+            nosso_valor = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[1]/div[2]/div[2]').text)
+            tempo_restante = str(item.find_element_by_xpath('./div[1]/div[2]/div/div[2]/span/span').text)
+            intervalo_lances = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[2]/span/small').text)
+            input = item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[1]/input')
+            botao_confirma = item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[1]/div/button/u')
+            menu_lances = item.find_element_by_xpath('./div[2]/div[2]/div/app-botao-icone/span/button/i')
+            item_disputa = {
+                'item':codigo_item,
+                'atual_valor':atual_valor,
+                'nosso_valor':nosso_valor,
+                'tempo_restante':tempo_restante,
+                'intervalo_lances':converter_intervalo_lances(intervalo_lances),
+                'input':input,
+                'botao_confirma':botao_confirma,
+                'menu_lances':menu_lances,
+            }
+            self.decidir_lance(self,item_disputa)
 
-    def decidir_lance(self,item):#adicionar modo de disputa fechada
+    def decidir_lance(self,item):
         for cotado in self.itens:
             if(str(cotado[0]) == str(item['item'])):
                 melhor = converter_texto_para_decimal(item['melhor_valor'])
