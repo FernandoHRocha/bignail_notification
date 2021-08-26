@@ -5,9 +5,11 @@ import os
 
 sel_delay=0.5
 sel_driver = ''
-net_aguardando = 'Aguardando disputa'
-net_disputa = 'Em disputa'
-net_encerrado = 'Encerrados'
+itens_aguardando_disputa = 'Aguardando disputa'
+itens_fase_disputa = 'Em disputa'
+itens_disputa_encerrados = 'Encerrados'
+item_etapa_aberta = 'Etapa aberta'
+item_etapa_fechada = 'Etapa fechada'
 
 def abrir_pasta():
     path = 'C:/Fernando/LOJA/outros/twilio/bignail_notification'
@@ -219,15 +221,14 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         self.itens=[]
         for row in range(2,wb.max_row):
             rowItens=[]
-            colunas_interesse=[1,4,5,10]
-            colunas_monetarias =[4,10]
+            colunas_interesse=[1,4,5,14]
+            colunas_monetarias =[4,14]
             for col in colunas_interesse:
                 if(col in colunas_monetarias):
                     rowItens.append(round(wb.cell(row,col).value,2))
                 else:
                     rowItens.append(wb.cell(row,col).value)
             self.itens.append(rowItens)
-        print(self.itens)
 
     def abrir_disputa(self):
         sel.clicar_xpath(self,'/html/body/div[1]/ul/li[2]/a')
@@ -254,65 +255,83 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         self.navegacao_itens = sel.obter_elementos_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/ul/li')
         
         while(True):#CICLO DE REPETIÇÃO ATÉ QUE NÃO HAJA ITENS EM DISPUTA E AGUARDANDO
-            if(self.navegacao_itens[0].text != net_aguardando or self.navegacao_itens[1].text != net_disputa):
-                if(self.navegacao_itens[1].text != net_disputa):
+            if(self.navegacao_itens[0].text != itens_aguardando_disputa or self.navegacao_itens[1].text != itens_fase_disputa):
+                if(self.navegacao_itens[1].text != itens_fase_disputa):
                     self.navegacao_itens[1].click()
                     self.reconhecer_itens_disputa(self)#COMEÇAR O CICLO DE DISPUTA DE LANCES
-                elif(self.navegacao_itens[0].text != net_aguardando):
+                elif(self.navegacao_itens[0].text != itens_aguardando_disputa):
                     self.navegacao_itens[0].click()
                     aguardando = True
                     while(aguardando):#CICLO DE ESPERA ATÉ QUE ALGUM ITEM AGUARDANDO ENTRE EM FASE DE LANCES
-                        if(self.navegacao_itens[1].text != net_disputa):
+                        if(self.navegacao_itens[1].text != itens_fase_disputa):
                             aguardando=False
                         else:
                             time.sleep(5)
             else:
                 #EXTRAIR RELATÓRIO FINAL DA DISPUTA
+                print('TESTE - Exportar relatório')
                 break
         
 
     def reconhecer_itens_disputa(self):
         itens_em_disputa = sel.obter_elementos_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[2]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div/div')
+        sel.obter_elemento_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[2]/div/app-disputa-fornecedor-itens/div/div/div[2]/div/div[1]/button').click()
         for item in itens_em_disputa:#CONFERIR QUAL O ESTADO DA DISPUTA (ETAPA ABERTA - ETAPA FECHADA - FINALIZADO)
             item_disputa = {}
-            codigo_item = str(item.find_element_by_xpath('./div[1]/div[1]/div[1]/div[1]/span[1]').text)
-            atual_valor = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[1]/div[2]/div[1]').text)
-            nosso_valor = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[1]/div[2]/div[2]').text)
-            tempo_restante = str(item.find_element_by_xpath('./div[1]/div[2]/div/div[2]/span/span').text)
-            intervalo_lances = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[2]/span/small').text)
-            input = item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[1]/input')
-            botao_confirma = item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[1]/div/button/u')
-            menu_lances = item.find_element_by_xpath('./div[2]/div[2]/div/app-botao-icone/span/button/i')
-            item_disputa = {
-                'item':codigo_item,
-                'atual_valor':atual_valor,
-                'nosso_valor':nosso_valor,
-                'tempo_restante':tempo_restante,
-                'intervalo_lances':converter_intervalo_lances(intervalo_lances),
-                'input':input,
-                'botao_confirma':botao_confirma,
-                'menu_lances':menu_lances,
-            }
+            etapa_disputa = str(item.find_element_by_xpath('./div[1]/div[1]/div[2]').text)
+            if(etapa_disputa.find(item_etapa_aberta) >= 0):
+                codigo_item = str(item.find_element_by_xpath('./div[1]/div[1]/div[1]/div[1]/span[1]').text)
+                atual_valor = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[1]/div[2]/div[1]').text)
+                nosso_valor = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[1]/div[2]/div[2]').text)
+                tempo_restante = str(item.find_element_by_xpath('./div[1]/div[2]/div/div[2]/span/span').text)
+                intervalo_lances = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[2]/span/small').text)
+                input = item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[1]/input')
+                botao_confirma = item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[1]/div/button/u')
+                menu_lances = item.find_element_by_xpath('./div[2]/div[2]/div/app-botao-icone/span/button/i')
+                item_disputa = {
+                    'item':codigo_item,
+                    'etapa':item_etapa_aberta,
+                    'atual_valor':atual_valor,
+                    'nosso_valor':nosso_valor,
+                    'tempo_restante':tempo_restante,
+                    'intervalo_lances':converter_intervalo_lances(intervalo_lances),
+                    'input':input,
+                    'botao_confirma':botao_confirma,
+                    'menu_lances':menu_lances,
+                }
+                print(item_disputa['item'])
+            elif(etapa_disputa.find(item_etapa_fechada)>=0):#CONFIRMAR QUAIS DADOS QUE ESTÃO SENDO ENCONTRADOS
+                codigo_item = str(item.find_element_by_xpath('./div[1]/div[1]/div[1]/div[1]/span[1]').text)
+                intervalo_lances = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[2]/span/small').text)
+                input = item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[1]/input')
+                botao_confirma = item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[1]/div/button/u')
+                item_disputa = {
+                    'item':codigo_item,
+                    'etapa':item_etapa_fechada,
+                    'atual_valor':atual_valor,
+                    'nosso_valor':nosso_valor,
+                    'tempo_restante':tempo_restante,
+                    'intervalo_lances':converter_intervalo_lances(intervalo_lances),
+                    'input':input,
+                    'botao_confirma':botao_confirma,
+                }
             self.decidir_lance(self,item_disputa)
 
-    def decidir_lance(self,item):
+    def decidir_lance(self,item):#DIFERENCIAR A ESTRATEGIA DE LANCE COM A ETAPA DO ITEM
         for cotado in self.itens:
             if(str(cotado[0]) == str(item['item'])):
-                melhor = converter_texto_para_decimal(item['melhor_valor'])
-                nosso = converter_texto_para_decimal(item['nosso_valor'])
-                tempo = converter_tempo_restante(item['tempo_restante'])
-                intervalo = converter_intervalo_lances(item['intervalo_lances'])
-                print(melhor)
-                print(nosso)
-                print(tempo)
-                if(tempo < 120):
-                    if( melhor > nosso):
-                        valor = melhor - intervalo
-                        #enviar_lance(self,item,valor)
-                    print('Nosso mínimo é R$ '+ nosso)
-                    print('Preço atual é R$ ' + melhor)
-                return
-        return
+                if(item['etapa'] == item_etapa_aberta):
+                    melhor = converter_texto_para_decimal(item['atual_valor'])
+                    nosso = converter_texto_para_decimal(item['nosso_valor'])
+                    tempo = converter_tempo_restante(item['tempo_restante'])
+                    intervalo = converter_intervalo_lances(item['intervalo_lances'])
+                    #print('Item ',item['item'],' está a R$ ',melhor, ', e o nosso melhor é R$ ',cotado[3])
+                    if(tempo < 120):
+                        if( melhor > nosso):
+                            #valor = melhor - intervalo
+                            #enviar_lance(self,item,valor)
+                            #print('dar lance R$'+ valor)
+                            return
 
     def extrair_relatorio(self):
         self.navegacao_itens[2].click()
