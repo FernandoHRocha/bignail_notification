@@ -235,7 +235,7 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
                 colunas = linha.find_elements_by_xpath('./td')
                 codpregao = colunas[1].text
                 coduasg = colunas[2].text
-                if((codpregao == self.pregao) and (coduasg == self.uasg)):
+                if((codpregao == self.pregao) and (coduasg == self.uasg)):#SOMENTE ABRIRÁ A DISPUTA CASO CORRESPONDA AO PREGÃO E AO UASG
                     colunas[0].click()
             time.sleep(5)
             self.janela_pregoes = self.sel_driver.window_handles[0]
@@ -249,17 +249,27 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
     def reconhecer_disputa(self):#COLOCAR UMA ESTRUTURA DE REPETIÇÃO PARA CONTINUAR ATÉ QUE A DISPUTA ENCERRE
         self.modo_disputa = sel.obter_elemento_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[4]/div[1]/app-identificacao-compra/div/span').text
         self.navegacao_itens = sel.obter_elementos_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/ul/li')
-        print(self.modo_disputa)
-        for botao in self.navegacao_itens:
-            print(botao.text)
-        if(self.navegacao_itens[1].text != 'Em disputa'):
-            self.navegacao_itens[1].click()
-            self.reconhecer_itens_disputa(self)  
+        
+        while(True):
+            if(self.navegacao_itens[0].text != 'Aguardando' or self.navegacao_itens[1].text != 'Em disputa'):
+                if(self.navegacao_itens[1].text != 'Em disputa'):
+                    self.navegacao_itens[1].click()
+                    self.reconhecer_itens_disputa(self)#COMEÇAR O CICLO DE DISPUTA DE LANCES
+                elif(self.navegacao_itens[0].text != 'Aguardando'):
+                    aguardando = True
+                    while(aguardando):
+                        if(self.navegacao_itens[1].text != 'Em disputa'):
+                            aguardando=False
+                        else:
+                            time.sleep(5)
+            else:
+                break
+        
 
     def reconhecer_itens_disputa(self):
         while(True):
             itens_em_disputa = sel.obter_elementos_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[2]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div/div')
-            print("Itens em fase de disputa de lances: "+str(len(itens_em_disputa)))
+            itens_reconhecidos = []
             for item in itens_em_disputa:
                 item_disputa = {}
                 codigo_item = str(item.find_element_by_xpath('./div[1]/div[1]/div[1]/div[1]/span[1]').text)
@@ -280,11 +290,10 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
                     'botao_confirma':botao_confirma,
                     'menu_lances':menu_lances,
                 }
-                self.decidir_lance(self,item_disputa)
-                #CONSEGUE LER DURANTE A DISPUTA ABERTA E DISPURA FECHADA NÃO CONVOCADO
-            return
+                itens_reconhecidos.append(item_disputa)
+            self.itens_reconhecidos = itens_reconhecidos
 
-    def decidir_lance(self,item):
+    def decidir_lance(self,item):#adicionar modo de disputa fechada
         for cotado in self.itens:
             if(str(cotado[0]) == str(item['item'])):
                 melhor = converter_texto_para_decimal(item['melhor_valor'])
