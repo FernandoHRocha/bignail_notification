@@ -18,7 +18,7 @@ class andamento():
     
     def iniciar(self):
         self.verificar_planilha_controle()
-        sel.configurar_webdriver(self)
+        sel.configurar_webdriver(self,False)
         sel.coletar_credenciais_acessar_sistema(self)
         sel.acessar_menu_comprasnet(self)
         self.verificar_anexos()

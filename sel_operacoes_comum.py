@@ -66,14 +66,17 @@ def fechar_popup(self):
     self.sel_driver.close()
     self.sel_driver.switch_to.window(self.sel_mainWindow)
 
-def configurar_webdriver(self):
-    print('Brainpro Tecnologia - Automação por Fernando H Rocha')
+def configurar_webdriver(self,exibicao):
+    print('Brainpro Tecnologia - Automação por Fernando H. Rocha')
     options = webdriver.ChromeOptions()
-    options.add_argument ('--headless')
     options.add_argument('--log-level=3')
     options.add_argument('--disable-notifications')
-    self.sel_driver = webdriver.Chrome("chromedriver.exe", options=options)
-    #self.sel_driver.maximize_window()
+    if(exibicao):
+        self.sel_driver = webdriver.Chrome("chromedriver.exe", options=options)
+        self.sel_driver.maximize_window()
+    else:
+        options.add_argument ('--headless')
+        self.sel_driver = webdriver.Chrome("chromedriver.exe", options=options)
     endereco_comprasnet=dados.pregao_address
     self.sel_driver.get(endereco_comprasnet)
 
