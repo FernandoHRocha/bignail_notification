@@ -3,6 +3,5 @@ dados.py
 package-lock.json
 /__pycache__/
 notificacoes.xlsx
-COTACAO.xlsx
-~$COTACAO.xlsx
+/COTACAO
 sel_operacoes_comum.py

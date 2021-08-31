@@ -7,6 +7,7 @@ import traceback
 
 sel_delay=0.5
 sel_driver = ''
+caminho_pasta = 'C:/Fernando/LOJA/outros/twilio/bignail_notification/COTACAO'
 itens_aguardando_disputa = 'Aguardando disputa'
 itens_fase_disputa = 'Em disputa'
 itens_disputa_encerrados = 'Encerrados'
@@ -14,8 +15,7 @@ item_etapa_aberta = 'Etapa aberta'
 item_etapa_fechada = 'Etapa fechada'
 
 def abrir_pasta():
-    path = 'C:/Fernando/LOJA/outros/twilio/bignail_notification'
-    path = os.path.realpath(path)
+    path = os.path.realpath(caminho_pasta)
     os.startfile(path)
 
 def oferecer_abrir_pasta():#OFERECE A OPÇÃO DE ABRIR A PASTA QUE DEVERÁ CONTER AS PLANILHAS CONTROLE E COTAÇÃO
@@ -34,21 +34,16 @@ def converter_texto_para_decimal(texto):
 
 def converter_intervalo_minimo(intervalo):
     padrao1 = 'Intervalo mínimo entre lances: R$ '
+    padrao2 = 'Não há intervalo mínimo entre lances'
     if padrao1 in intervalo:
         intervalo = intervalo.replace(padrao1,"")
         return converter_texto_para_decimal(intervalo)
+    elif padrao2 in intervalo:
+        return 0.10
 
 def converter_tempo_restante(tempo):
     tempo = tempo.split(":")
     return int(tempo[1])+(int(tempo[0])*60)
-
-def enviar_lance(self, item, valor):
-    valor = str(valor).replace('.',',')
-    sel.enterFieldElement(item['input'],valor)
-    item['botao_confirma'].click()
-    sel.obter_elemento_xpath(self,'/html/body/modal-container/div/div/app-dialog-confirmacao/div/div/div[3]/div/div[2]/button').click()
-    print('lance enviado')
-    return
 
 class ComprasNet:#LEVA A APLICAÇÃO ATÉ UM LUGAR EM COMUM DENTRO DO COMPRASNET E MOSTRA AS OPÇÕES DE OPERAÇÕES
 
@@ -79,13 +74,13 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         return
     
     def ler_planilha_cotacao(self):
-        wb = openpyxl.load_workbook('COTACAO.xlsx', data_only=True)['Controle']
+        wb = openpyxl.load_workbook('./COTACAO/COTACAO.xlsx', data_only=True)['Controle']
         self.pregao = str(wb.cell(2,1).value)
         self.uasg = str(wb.cell(2,2).value)
         self.abertura = str(wb.cell(2,3).value)
         self.hora = str(wb.cell(2,4).value)
         self.inserir_orgao = str(wb.cell(2,5).value)
-        wb = openpyxl.load_workbook('COTACAO.xlsx', data_only=True)['Planilha1']
+        wb = openpyxl.load_workbook('./COTACAO/COTACAO.xlsx', data_only=True)['Planilha1']
         itens=[]
         for row in range(2,wb.max_row):
             auxiliar_item_linha=[]
@@ -214,10 +209,10 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         return
 
     def ler_planilha_cotacao(self):#OBTEM UMA LISTA DE VALORES NUMÉRICOS PARA CADA ITEM COTADO
-        wb = openpyxl.load_workbook('COTACAO.xlsx', data_only=True)['Controle']
+        wb = openpyxl.load_workbook('./COTACAO/COTACAO.xlsx', data_only=True)['Controle']
         self.pregao = str(wb.cell(2,1).value)
         self.uasg = str(wb.cell(2,2).value)
-        wb = openpyxl.load_workbook('COTACAO.xlsx', data_only=True)['Planilha1']
+        wb = openpyxl.load_workbook('./COTACAO/COTACAO.xlsx', data_only=True)['Planilha1']
         self.itens=[]
         for row in range(2,wb.max_row):
             rowItens=[]
@@ -328,7 +323,6 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
                         'input':input,
                         'botao_confirma':botao_confirma,
                     }
-                
             except:
                 type, val, tb = sys.exc_info()
                 traceback.clear_frames(tb)
@@ -338,12 +332,12 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         for cotado in self.itens:
             if(str(cotado[0]) == str(item['item'])):
                 if(item['etapa'] == item_etapa_aberta):
-                    melhor = converter_texto_para_decimal(item['atual_valor'])
+                    atual = converter_texto_para_decimal(item['atual_valor'])
                     nosso = converter_texto_para_decimal(item['nosso_valor'])
-                    intervalo = converter_intervalo_minimo(item['intervalo_lances'])
+                    intervalo = float(item['intervalo_lances'])
                     item['menu_lances'].click()
                     time.sleep(sel_delay)
-                    try:
+                    try:#ABRIR O TABELA COM OS MELHORES LANCES
                         item['webelement'].find_element_by_xpath('./div[3]/app-listagem-propostas-lances-item/p-tabview/div/ul/li[2]/a').click()
                         time.sleep(sel_delay)
                         item['webelement'].find_element_by_xpath('./div[3]/app-listagem-propostas-lances-item/p-tabview/div/ul/li[2]/a').click()
@@ -361,18 +355,32 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
                             break
                     for n in range(0,len(linhas_tabela)):
                         aux_valor = linhas_tabela[n].find_element_by_xpath('./td[2]').text
-                        valores.append(aux_valor)
-                        print('Valor obtido: ',aux_valor,' |Valor nosso item: ',item['nosso_valor'], ' |Valor cotado: ',cotado[3])
-                        if(aux_valor == item['nosso_valor']):
-                            if(valores[n-1] < cotado[3]):
-                                print('Lance inferior: ',valores[n-1],' |Nosso lance atual: ', valores[n])
-                                print('Intervalo mínimo de: ', intervalo)
-                                lance = cotado[3]-intervalo
-                                while(lance>valores[n-1]):
+                        valores.append(float(converter_texto_para_decimal(aux_valor)))
+                        if((valores[n] > cotado[3]) and (valores[n] < float(nosso))):
+                            if((valores[n-1] < cotado[3]) and (valores[n]-1 < float(nosso))):
+                                lance = valores[n]-intervalo
+                                while(lance>float(nosso)-intervalo):
                                     lance -= 0.05
-                                print('Realizar lance no valor de: ',lance)
-                                return
-                            #enviar_lance(self,item,valor)
+                                print('Item ',item['item'],' -> R$ ',lance)
+                                #enviar_lance(self,item,valor)
+                elif(item['etapa'] == item_etapa_fechada):
+                    atual = converter_texto_para_decimal(item['atual_valor'])
+                    nosso = converter_texto_para_decimal(item['nosso_valor'])
+                    intervalo = converter_intervalo_minimo(item['intervalo_lances'])
+                    if(cotado[3] < float(atual)):
+                        print('Nosso preço está mais baixo que o atual para o item ', item['item'])
+                        if(float(nosso) > (float(atual)*1.1)):
+                            print('Dar lance de R$ ', str(float(nosso)*1.1),' para o item ',item['item'])
+                            return
+                        return
+
+    def enviar_lance(self, item, valor):
+        valor = str(valor).replace('.',',')
+        sel.enterFieldElement(item['input'],valor)
+        item['botao_confirma'].click()
+        sel.obter_elemento_xpath(self,'/html/body/modal-container/div/div/app-dialog-confirmacao/div/div/div[3]/div/div[2]/button').click()
+        print('lance enviado')
+        return
 
     def extrair_relatorio(self):#TESTAR TESTAR TESTAR
         self.navegacao_itens[2].click()
