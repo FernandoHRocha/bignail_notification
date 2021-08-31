@@ -1,6 +1,7 @@
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.alert import Alert
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
@@ -103,3 +104,6 @@ def acessar_menu_comprasnet(self):
             self.sel_driver.refresh()
             time.sleep(sel_delay)
             fechar_popup(self)
+
+def aceitar_alerta(driver):
+    Alert(driver).accept()

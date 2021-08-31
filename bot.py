@@ -8,6 +8,8 @@ import traceback
 sel_delay=0.5
 sel_driver = ''
 caminho_pasta = 'C:/Fernando/LOJA/outros/twilio/bignail_notification/COTACAO'
+endereco_proposta = 'C:/Fernando/LOJA/outros/twilio/bignail_notification/COTACAO/PROPOSTA.pdf'
+endereco_documentacao = 'C:/Fernando/LOJA/outros/twilio/bignail_notification/COTACAO/DOCUMENTACAO.rar'
 itens_aguardando_disputa = 'Aguardando disputa'
 itens_fase_disputa = 'Em disputa'
 itens_disputa_encerrados = 'Encerrados'
@@ -70,8 +72,14 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         oferecer_abrir_pasta()
         self.ler_planilha_cotacao(self)
         self.acessar_cadastro(self)
-        self.identificar_pagina_registro(self)
-        return
+        if(len(self.itens_cotacao)>0):
+            self.registro_pendente = True
+            while(True):
+                self.identificar_pagina_registro(self)
+                if(len(self.itens_cotacao)==0):
+                    break
+        else:
+            print('A planilha não possui itens cotados, ou não foi possível a sua identificação.')
     
     def ler_planilha_cotacao(self):
         wb = openpyxl.load_workbook('./COTACAO/COTACAO.xlsx', data_only=True)['Controle']
@@ -137,66 +145,97 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         tabela = sel.obter_elementos_xpath(self,'/html/body/center/table[2]/tbody/tr[4]/td/center[2]/table/tbody/tr')
         del tabela[0]
         item_registrar = []
-        if(len(tabela)==40):#PODEM HAVER CONFIGURAÇÕES DIFERENTES
+        novo_grupo = True
+        itens_pagina = []
+        aux_item =[]
+        for tr in tabela:
+            if(novo_grupo):
+                if(tr.find_element_by_xpath('./td[2]').text != ''):
+                    aux_item.append(tr)
+                    novo_grupo = False
+                else:
+                    aux_item.append(tr)
+                    novo_grupo = False
+            else:
+                if(tr.find_element_by_xpath('./td[2]').text == ''):
+                    aux_item.append(tr)
+                else:
+                    novo_grupo = True
+                    itens_pagina.append(aux_item)
+                    aux_item = []
+                    aux_item.append(tr)
+        self.decidir_item_preencher(self,itens_pagina)
 
-            for item_cotado in self.itens_cotacao:
-                #ITENS EM COTAÇÃO EM ORDEM CRESCENTE DE IDENTIFICAÇÃO DO ITEM
-                #PARA CADA ITEM EM COTAÇÃO, SERÁ BUSCADO O ITEM NA PÁGINA DE RESGISTRO E MUDANDO DE PÁGINA ATÉ ENCONTRAR O ITEM E REMOVE-LO DA LISTA
-                item_pendente = True
-                while(item_pendente):
-                    tabela = sel.obter_elementos_xpath(self,'/html/body/center/table[2]/tbody/tr[4]/td/center[2]/table/tbody/tr')
-                    del tabela[0]
-                    itens = []
-                    while(True):#ARRANJA OS CAMPOS DOS ITENS EM APENAS UM ELEMENTO DENTRO DA LISTA
-                        item_aux = []
-                        item_aux.append(tabela.pop(0))
-                        item_aux.append(tabela.pop(0))
-                        item_aux.append(tabela.pop(0))
-                        item_aux.append(tabela.pop(0))
-                        itens.append(item_aux)
-                        if(len(tabela)<1):
-                            break
+    def decidir_item_preencher(self, itens_pagina):
+        print('decidir_item_preencher')
+        print(self.itens_cotacao[0][0])
+        for item_cotado in self.itens_cotacao:
+            for item_pagina in itens_pagina:
+                identificador = item_pagina[0].find_element_by_xpath('./td[2]').text
+                if(identificador == item_cotado[0]):
+                    self.preencher_item_registrar(item_cotado = self.itens_cotacao.pop(0), item_pagina = item_pagina)
+                    if(self.registro_pendente):
+                        self.submeter_documentacao(self)
+                        self.registro_pendente = False
+                    return
+            print('botão inserir')
+            sel.clicar_xpath(self,'/html/body/center/table[2]/tbody/tr[17]/td/input[5]')
+            time.sleep(1)
+            print('aceitar alerta')
+            sel.aceitar_alerta(self.sel_driver)
+            time.sleep(1)
+            print('proxima página')
+            sel.clicar_xpath(self,'/html/body/center/table[2]/tbody/tr[8]/td/table/tbody/tr/td[2]/input')
+    
+    def submeter_documentacao(self):
+        sel.clicar_xpath(self,'/html/body/center/table[2]/tbody/tr[3]/td/table/tbody/tr[4]/td/table/tbody/tr/td/center/input[1]')
+        tabela = sel.obter_elementos_xpath(self,'/html/body/center/table[2]/tbody/tr[10]/td/table')
+        for linha in tabela:
+            linha.find_element_by_xpath('./tbody/tr/td[2]/input').click()
+        #PROPOSTA
+        janela_atual = self.sel_driver.window_handles[0]
+        sel.clicar_xpath(self,'/html/body/center/table[2]/tbody/tr[14]/td/input[2]')
+        time.sleep(sel_delay)
+        janela_documento = self.sel_driver.window_handles[1]
+        self.sel_driver.switch_to.window(janela_documento)
+        sel.enterField(self,'/html/body/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td/table/tbody/tr[1]/td/input',endereco_proposta)
+        sel.clicar_xpath(self,'/html/body/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td/table/tbody/tr[3]/td/input')
+        sel.aceitar_alerta(self.sel_driver)
+        self.sel_driver.switch_to.window(janela_atual)
+        sel.trocar_frame(self,'/html/frameset/frameset/frame')
+        #DOCUMENTACAO
+        sel.clicar_xpath(self,'/html/body/center/table[2]/tbody/tr[16]/td/input[2]')
+        time.sleep(sel_delay)
+        janela_documento = self.sel_driver.window_handles[1]
+        self.sel_driver.switch_to.window(janela_documento)
+        sel.enterField(self,'/html/body/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td/table/tbody/tr[1]/td/input',endereco_documentacao)
+        sel.clicar_xpath(self,'/html/body/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td/table/tbody/tr[3]/td/input')
+        sel.aceitar_alerta(self.sel_driver)
+        self.sel_driver.switch_to.window(janela_atual)
+        sel.trocar_frame(self,'/html/frameset/frameset/frame')
+        time.sleep(3)
 
-                    item_registrar = []
-                    for item_registrar in itens:#PROCURA ITEM A ITEM
-                        identificador = item_registrar[0].find_element_by_css_selector('.tex3b').text#IDENTIFICAÇÃO DO ITEM
-                        if(identificador == item_cotado[0]):
-                            item_pendente = False
-                            self.preencher_item_registrar(item_cotado = item_cotado, item_registrar = item_registrar)
-                    if(item_pendente):#CASO O ITEM NÃO TENHA SIDO ENCONTRADO, PROSSEGUIMOS PARA A PRÓXIMA PÁGINA
-                        sel.obter_elemento_id(self,'proximas').click()
-
-    def preencher_item_registrar(item_registrar,item_cotado):
-        for entrada in item_registrar[0].find_elements_by_tag_name('input'):#ENTRADAS DE DADOS REFERENTES A QUANTIDADE E VALORES
-            if(entrada.is_displayed() and entrada.is_enabled()):
-                if(str(entrada.get_attribute('name')) == 'qtdOfertada'):
-                    sel.enterFieldElement(entrada,item_cotado[4])
-                if(str(entrada.get_attribute('name')) == 'valorunit'):
-                    sel.enterFieldElement(entrada,item_cotado[3])
-                if(str(entrada.get_attribute('name')) == 'valorprp'):
-                    sel.enterFieldElement(entrada,item_cotado[5])
-                #print(entrada.get_attribute('name'))
-                #qtdOfertada
-                #valorunit
-                #valorprp
-        for entrada in item_registrar[1].find_elements_by_tag_name('input'):#ENTRADAS DE DADOS REFERENTES A MARCA MODELO
-            if(entrada.is_displayed() and entrada.is_enabled()):
-                if(str(entrada.get_attribute('name')) == 'MarcaFornec'):
-                    sel.enterFieldElement(entrada,item_cotado[2])
-                if(str(entrada.get_attribute('name')) == 'FabriFornec'):
-                    sel.enterFieldElement(entrada,item_cotado[2])
-                if(str(entrada.get_attribute('name')) == 'ModVerFornec'):
-                    sel.enterFieldElement(entrada,item_cotado[2])
-                #print(entrada.get_attribute('name'))
-                #MarcaFornec
-                #FabriFornec
-                #ModVerFornec
-        for entrada in item_registrar[2].find_elements_by_tag_name('textarea'):#ENTRADAS DE DADOS REFERENTES A DESCRIÇÃO
-            if(entrada.is_displayed() and entrada.is_enabled()):
-                if(str(entrada.get_attribute('name')) == 'DescrFornec'):
-                    sel.enterFieldElement(entrada,item_cotado[1])
-                #print(entrada.get_attribute('name'))
-                #DescrFornec
+    def preencher_item_registrar(item_pagina,item_cotado):
+        print('preencher_item_registrar')
+        for linha in item_pagina:
+            for entrada in linha.find_elements_by_tag_name('input'):#ENTRADAS DE DADOS REFERENTES A QUANTIDADE, VALORES, MODELO
+                if(entrada.is_displayed() and entrada.is_enabled()):
+                    if(str(entrada.get_attribute('name')) == 'qtdOfertada'):
+                        sel.enterFieldElement(entrada,item_cotado[4])
+                    if(str(entrada.get_attribute('name')) == 'valorunit'):
+                        sel.enterFieldElement(entrada,item_cotado[3])
+                    if(str(entrada.get_attribute('name')) == 'valorprp'):
+                        sel.enterFieldElement(entrada,item_cotado[5])
+                    if(str(entrada.get_attribute('name')) == 'MarcaFornec'):
+                        sel.enterFieldElement(entrada,item_cotado[2])
+                    if(str(entrada.get_attribute('name')) == 'FabriFornec'):
+                        sel.enterFieldElement(entrada,item_cotado[2])
+                    if(str(entrada.get_attribute('name')) == 'ModVerFornec'):
+                        sel.enterFieldElement(entrada,item_cotado[2])
+            for entrada in linha.find_elements_by_tag_name('textarea'):#ENTRADAS DE DADOS REFERENTES A DESCRIÇÃO
+                if(entrada.is_displayed() and entrada.is_enabled()):
+                    if(str(entrada.get_attribute('name')) == 'DescrFornec'):
+                        sel.enterFieldElement(entrada,item_cotado[1])
 
 class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
 
