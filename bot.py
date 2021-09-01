@@ -8,8 +8,12 @@ import traceback
 sel_delay=0.5
 sel_driver = ''
 caminho_pasta = 'C:/Fernando/LOJA/outros/twilio/bignail_notification/COTACAO'
-endereco_proposta = 'C:/Fernando/LOJA/outros/twilio/bignail_notification/COTACAO/PROPOSTA.pdf'
-endereco_documentacao = 'C:/Fernando/LOJA/outros/twilio/bignail_notification/COTACAO/DOCUMENTACAO.rar'
+arquivo_planilha = 'COTACAO.xlsx'
+arquivo_proposta = 'PROPOSTA.pdf'
+arquivo_documentacao = 'DOCUMENTACAO.rar'
+endereco_planilha = caminho_pasta + '/' + arquivo_planilha
+endereco_proposta = caminho_pasta + '/' + arquivo_proposta
+endereco_documentacao = caminho_pasta + '/' + arquivo_documentacao
 itens_aguardando_disputa = 'Aguardando disputa'
 itens_fase_disputa = 'Em disputa'
 itens_disputa_encerrados = 'Encerrados'
@@ -21,7 +25,9 @@ def abrir_pasta():
     os.startfile(path)
 
 def oferecer_abrir_pasta():#OFERECE A OPÇÃO DE ABRIR A PASTA QUE DEVERÁ CONTER AS PLANILHAS CONTROLE E COTAÇÃO
-    print('A planilha de cotação já está na pasta? O nome do arquivo deve ser "COTACAO.xlsx"')
+    print('O nome dos arquivos devem ser:\nPlanilha de cotação "'+arquivo_planilha+'"')
+    print('Proposta assinada "'+arquivo_proposta+'"')
+    print('Documentação compactada "'+arquivo_documentacao+'"')
     print('1 - Abrir a pasta.')
     print('2 - A planilha já está na pasta.')
     escolha = input('>')
@@ -73,8 +79,10 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         self.ler_planilha_cotacao(self)
         self.acessar_cadastro(self)
         if(len(self.itens_cotacao)>0):
+            print('iniciar')
             self.registro_pendente = True
             while(True):
+                print('inciar while com ',len(self.itens_cotacao),' itens para registrar')
                 self.identificar_pagina_registro(self)
                 if(len(self.itens_cotacao)==0):
                     break
@@ -142,6 +150,7 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         sel.clicar_xpath(self,'/html/body/table/tbody/tr[2]/td/table[2]/tbody/tr[2]/td[2]/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td[1]/a')
 
     def identificar_pagina_registro(self):
+        print('identificar_pagina_registro')
         tabela = sel.obter_elementos_xpath(self,'/html/body/center/table[2]/tbody/tr[4]/td/center[2]/table/tbody/tr')
         del tabela[0]
         item_registrar = []
@@ -168,8 +177,8 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
 
     def decidir_item_preencher(self, itens_pagina):
         print('decidir_item_preencher')
-        print(self.itens_cotacao[0][0])
         for item_cotado in self.itens_cotacao:
+            print('Procurando inserir o item ',item_cotado[0])
             for item_pagina in itens_pagina:
                 identificador = item_pagina[0].find_element_by_xpath('./td[2]').text
                 if(identificador == item_cotado[0]):
@@ -177,17 +186,18 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
                     if(self.registro_pendente):
                         self.submeter_documentacao(self)
                         self.registro_pendente = False
-                    return
+                    break
             print('botão inserir')
-            sel.clicar_xpath(self,'/html/body/center/table[2]/tbody/tr[17]/td/input[5]')
+            sel.obter_elemento_id(self,'incluir').click()
             time.sleep(1)
             print('aceitar alerta')
             sel.aceitar_alerta(self.sel_driver)
             time.sleep(1)
             print('proxima página')
-            sel.clicar_xpath(self,'/html/body/center/table[2]/tbody/tr[8]/td/table/tbody/tr/td[2]/input')
+            sel.obter_elemento_id(self,'proximas')
     
     def submeter_documentacao(self):
+        print('submeter_documentacao')
         sel.clicar_xpath(self,'/html/body/center/table[2]/tbody/tr[3]/td/table/tbody/tr[4]/td/table/tbody/tr/td/center/input[1]')
         tabela = sel.obter_elementos_xpath(self,'/html/body/center/table[2]/tbody/tr[10]/td/table')
         for linha in tabela:
@@ -213,7 +223,12 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         sel.aceitar_alerta(self.sel_driver)
         self.sel_driver.switch_to.window(janela_atual)
         sel.trocar_frame(self,'/html/frameset/frameset/frame')
-        time.sleep(3)
+        while(True):
+            time.sleep(sel_delay)
+            sel_proposta = sel.obter_elemento_xpath(self,'/html/body/center/table[2]/tbody/tr[14]/td/table/tbody[2]/tr/td').text
+            sel_documentacao = sel.obter_elemento_xpath(self,'/html/body/center/table[2]/tbody/tr[16]/td/table/tbody[2]/tr/td').text
+            if((sel_proposta == arquivo_proposta) and (sel_documentacao == arquivo_documentacao)):
+                break
 
     def preencher_item_registrar(item_pagina,item_cotado):
         print('preencher_item_registrar')
