@@ -78,16 +78,17 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         oferecer_abrir_pasta()
         self.ler_planilha_cotacao(self)
         self.acessar_cadastro(self)
+        self.submeter_docs = True
         if(len(self.itens_cotacao)>0):
-            print('iniciar')
-            self.registro_pendente = True
+            print('iniciando processo de registro de item')
             while(True):
-                print('inciar while com ',len(self.itens_cotacao),' itens para registrar')
-                self.identificar_pagina_registro(self)
+                print('inciar while com ',len(self.itens_cotacao),' itens para registrar.')
+                self.encontrar_proximo_item_cotado(self,self.itens_cotacao[0],self.identificar_pagina_registro(self))
                 if(len(self.itens_cotacao)==0):
                     break
         else:
             print('A planilha não possui itens cotados, ou não foi possível a sua identificação.')
+        self.aceitar_insercao_item(self,False)
     
     def ler_planilha_cotacao(self):
         wb = openpyxl.load_workbook('./COTACAO/COTACAO.xlsx', data_only=True)['Controle']
@@ -150,7 +151,7 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         sel.clicar_xpath(self,'/html/body/table/tbody/tr[2]/td/table[2]/tbody/tr[2]/td[2]/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td[1]/a')
 
     def identificar_pagina_registro(self):
-        print('identificar_pagina_registro')
+        sel.trocar_frame(self,'/html/frameset/frameset/frame')
         tabela = sel.obter_elementos_xpath(self,'/html/body/center/table[2]/tbody/tr[4]/td/center[2]/table/tbody/tr')
         del tabela[0]
         item_registrar = []
@@ -173,47 +174,30 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
                     itens_pagina.append(aux_item)
                     aux_item = []
                     aux_item.append(tr)
-        self.decidir_item_preencher(self,itens_pagina)
+        itens_pagina.append(aux_item)
+        return itens_pagina
 
-    def decidir_item_preencher(self, itens_pagina):
-        print('decidir_item_preencher')
-        for item_cotado in self.itens_cotacao:
-            print('Procurando inserir o item ',item_cotado[0])
-            for item_pagina in itens_pagina:
-                identificador = item_pagina[0].find_element_by_xpath('./td[2]').text
-                if(identificador == item_cotado[0]):
-                    self.preencher_item_registrar(item_cotado = self.itens_cotacao.pop(0), item_pagina = item_pagina)
-                    if(self.registro_pendente):
-                        self.submeter_documentacao(self)
-                        self.registro_pendente = False
-                    break
-            print('botão inserir')
-            sel.obter_elemento_id(self,'incluir').click()
-            time.sleep(1)
-            print('aceitar alerta')
-            sel.aceitar_alerta(self.sel_driver)
-            time.sleep(1)
-            print('proxima página')
-            sel.obter_elemento_id(self,'proximas')
+    def encontrar_proximo_item_cotado(self, item_cotado, itens_pagina):
+        print('Procurando inserir o item ',item_cotado[0])
+        for item_pagina in itens_pagina:
+            print(item_pagina[0].find_element_by_xpath('./td[2]').text)
+            sel.trocar_frame(self,'/html/frameset/frameset/frame')
+            if(item_pagina[0].find_element_by_xpath('./td[2]').text == item_cotado[0]):
+                self.preencher_item_registrar(self,item_cotado = self.itens_cotacao.pop(0), item_pagina = item_pagina)
+                if(self.submeter_docs):
+                    self.submeter_documentacao(self)
+                    self.submeter_docs = False
+                break
+            if(item_pagina == itens_pagina[(len(itens_pagina)-1)]):
+                self.aceitar_insercao_item(self,True)
     
     def submeter_documentacao(self):
-        print('submeter_documentacao')
         sel.clicar_xpath(self,'/html/body/center/table[2]/tbody/tr[3]/td/table/tbody/tr[4]/td/table/tbody/tr/td/center/input[1]')
         tabela = sel.obter_elementos_xpath(self,'/html/body/center/table[2]/tbody/tr[10]/td/table')
         for linha in tabela:
             linha.find_element_by_xpath('./tbody/tr/td[2]/input').click()
-        #PROPOSTA
-        janela_atual = self.sel_driver.window_handles[0]
-        sel.clicar_xpath(self,'/html/body/center/table[2]/tbody/tr[14]/td/input[2]')
-        time.sleep(sel_delay)
-        janela_documento = self.sel_driver.window_handles[1]
-        self.sel_driver.switch_to.window(janela_documento)
-        sel.enterField(self,'/html/body/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td/table/tbody/tr[1]/td/input',endereco_proposta)
-        sel.clicar_xpath(self,'/html/body/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td/table/tbody/tr[3]/td/input')
-        sel.aceitar_alerta(self.sel_driver)
-        self.sel_driver.switch_to.window(janela_atual)
-        sel.trocar_frame(self,'/html/frameset/frameset/frame')
         #DOCUMENTACAO
+        janela_atual = self.sel_driver.window_handles[0]
         sel.clicar_xpath(self,'/html/body/center/table[2]/tbody/tr[16]/td/input[2]')
         time.sleep(sel_delay)
         janela_documento = self.sel_driver.window_handles[1]
@@ -225,13 +209,26 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         sel.trocar_frame(self,'/html/frameset/frameset/frame')
         while(True):
             time.sleep(sel_delay)
-            sel_proposta = sel.obter_elemento_xpath(self,'/html/body/center/table[2]/tbody/tr[14]/td/table/tbody[2]/tr/td').text
-            sel_documentacao = sel.obter_elemento_xpath(self,'/html/body/center/table[2]/tbody/tr[16]/td/table/tbody[2]/tr/td').text
-            if((sel_proposta == arquivo_proposta) and (sel_documentacao == arquivo_documentacao)):
+            if(len(self.sel_driver.window_handles) == 1):
                 break
+        #PROPOSTA
+        sel.clicar_xpath(self,'/html/body/center/table[2]/tbody/tr[14]/td/input[2]')
+        time.sleep(sel_delay)
+        janela_documento = self.sel_driver.window_handles[1]
+        self.sel_driver.switch_to.window(janela_documento)
+        sel.enterField(self,'/html/body/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td/table/tbody/tr[1]/td/input',endereco_proposta)
+        sel.clicar_xpath(self,'/html/body/form/table/tbody/tr[2]/td/table/tbody/tr[2]/td/table/tbody/tr[3]/td/input')
+        sel.aceitar_alerta(self.sel_driver)
+        while(True):
+            time.sleep(sel_delay)
+            if(len(self.sel_driver.window_handles) == 1):
+                break
+        self.sel_driver.switch_to.window(janela_atual)
+        sel.trocar_frame(self,'/html/frameset/frameset/frame') 
+        time.sleep(1)
+        sel.enter_alerta(self.sel_driver)
 
-    def preencher_item_registrar(item_pagina,item_cotado):
-        print('preencher_item_registrar')
+    def preencher_item_registrar(self,item_pagina,item_cotado):
         for linha in item_pagina:
             for entrada in linha.find_elements_by_tag_name('input'):#ENTRADAS DE DADOS REFERENTES A QUANTIDADE, VALORES, MODELO
                 if(entrada.is_displayed() and entrada.is_enabled()):
@@ -251,6 +248,21 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
                 if(entrada.is_displayed() and entrada.is_enabled()):
                     if(str(entrada.get_attribute('name')) == 'DescrFornec'):
                         sel.enterFieldElement(entrada,item_cotado[1])
+        sel.obter_elemento_xpath(self,'/html/body/center/table[2]/tbody/tr[10]/td/table[1]/tbody/tr/td[2]/input').click()
+
+    def aceitar_insercao_item(self, continuar):
+        sel.obter_elemento_id(self,'incluir').click()
+        time.sleep(1)
+        sel.aceitar_alerta(self.sel_driver)
+        if(continuar):
+            try:
+                sel.aceitar_alerta(self.sel_driver)
+            except:
+                time.sleep(2)
+            sel.trocar_frame(self,'/html/frameset/frameset/frame')
+            sel.obter_elemento_id(self,'proximas').click()
+        else:
+            print('Seus itens foram inseridos com sucesso.')
 
 class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
 
@@ -468,12 +480,6 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
 
 bot = ComprasNet()
 bot.iniciar()
-
-#bot = Disputar()
-#bot.ler_planilha_cotacao()
-
-#bot = Registrar()
-#bot.ler_planilha_cotacao()
 
 def fechar_webdriver(self):
     choose = input('>')
