@@ -82,7 +82,7 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         if(len(self.itens_cotacao)>0):
             print('iniciando processo de registro de item')
             while(True):
-                print('inciar while com ',len(self.itens_cotacao),' itens para registrar.')
+                print('Temos ',len(self.itens_cotacao),' item(s) para registrar.')
                 self.encontrar_proximo_item_cotado(self,self.itens_cotacao[0],self.identificar_pagina_registro(self))
                 if(len(self.itens_cotacao)==0):
                     break
@@ -180,7 +180,6 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
     def encontrar_proximo_item_cotado(self, item_cotado, itens_pagina):
         print('Procurando inserir o item ',item_cotado[0])
         for item_pagina in itens_pagina:
-            print(item_pagina[0].find_element_by_xpath('./td[2]').text)
             sel.trocar_frame(self,'/html/frameset/frameset/frame')
             if(item_pagina[0].find_element_by_xpath('./td[2]').text == item_cotado[0]):
                 self.preencher_item_registrar(self,item_cotado = self.itens_cotacao.pop(0), item_pagina = item_pagina)
@@ -193,12 +192,12 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
     
     def submeter_documentacao(self):
         sel.clicar_xpath(self,'/html/body/center/table[2]/tbody/tr[3]/td/table/tbody/tr[4]/td/table/tbody/tr/td/center/input[1]')
-        tabela = sel.obter_elementos_xpath(self,'/html/body/center/table[2]/tbody/tr[10]/td/table')
+        tabela = sel.obter_elementos_xpath(self,'//table[@id="declaraEdital"]//following-sibling::table')
         for linha in tabela:
             linha.find_element_by_xpath('./tbody/tr/td[2]/input').click()
         #DOCUMENTACAO
         janela_atual = self.sel_driver.window_handles[0]
-        sel.clicar_xpath(self,'/html/body/center/table[2]/tbody/tr[16]/td/input[2]')
+        sel.obter_elemento_id(self,'incluiAnexo').click()
         time.sleep(sel_delay)
         janela_documento = self.sel_driver.window_handles[1]
         self.sel_driver.switch_to.window(janela_documento)
@@ -212,7 +211,7 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
             if(len(self.sel_driver.window_handles) == 1):
                 break
         #PROPOSTA
-        sel.clicar_xpath(self,'/html/body/center/table[2]/tbody/tr[14]/td/input[2]')
+        sel.obter_elemento_id(self,'incluiAnexoP').click()
         time.sleep(sel_delay)
         janela_documento = self.sel_driver.window_handles[1]
         self.sel_driver.switch_to.window(janela_documento)
@@ -248,7 +247,7 @@ class Registrar:#REGISTRA O PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
                 if(entrada.is_displayed() and entrada.is_enabled()):
                     if(str(entrada.get_attribute('name')) == 'DescrFornec'):
                         sel.enterFieldElement(entrada,item_cotado[1])
-        sel.obter_elemento_xpath(self,'/html/body/center/table[2]/tbody/tr[10]/td/table[1]/tbody/tr/td[2]/input').click()
+        sel.obter_elemento_id(self,'declaraEdital').find_element_by_xpath('./tbody/tr/td[2]/input').click()
 
     def aceitar_insercao_item(self, continuar):
         sel.obter_elemento_id(self,'incluir').click()
