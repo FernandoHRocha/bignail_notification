@@ -27,6 +27,10 @@ def clicar_xpath(self, path):
     button = WebDriverWait(self.sel_driver,sel_wait).until(expected_conditions.element_to_be_clickable((By.XPATH,path)))
     button.click()
 
+def clicar_subelemento(driver, elemento, path):
+    button = WebDriverWait(driver, sel_wait).until(expected_conditions.element_to_be_clickable(elemento.find_element_by_xpath(path)))
+    button.click()
+    
 def trocar_frame(self, path):
     self.sel_driver.switch_to.default_content()
     frame = WebDriverWait(self.sel_driver,sel_wait).until(expected_conditions.frame_to_be_available_and_switch_to_it((By.XPATH,path)))

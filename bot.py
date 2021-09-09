@@ -317,8 +317,6 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         finalizado = False
         try:
             sel.clicar_xpath(self,'/html/body/modal-container/div/div/app-dialog-confirmacao/div/div/div[3]/div/div/button')
-            print('TESTE - Exportar relatório')
-            self.extrair_relatorio(self)
             finalizado = True
         except:
             pass
@@ -338,9 +336,10 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
                             else:
                                 time.sleep(5)
                 else:
-                    print('TESTE - Exportar relatório')
                     self.extrair_relatorio(self)
                     break
+        else:
+            self.extrair_relatorio(self)
 
     def reconhecer_itens_disputa(self):#CHAMA A FUNÇÃO DE ENVIO DE LANCES BASEADO NA ETAPA E TEMPO RESTANTE DE CADA ITEM
         itens_em_disputa = sel.obter_elementos_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[2]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div/div')
@@ -357,7 +356,7 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
                     intervalo_lances = str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[2]/span/small').text)
                     input = item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[1]/input')
                     botao_confirma = item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[1]/div/button/u')
-                    menu_lances = item.find_element_by_xpath('./div[2]/div[2]/div/app-botao-icone/span/button/i')
+                    menu_lances = item.find_element_by_xpath('.//*[@title="Mostrar propostas/lances do item"]')
                     item_disputa = {
                         'webelement':item,
                         'item':codigo_item,
@@ -421,6 +420,7 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
                     for n in range(0,len(linhas_tabela)):
                         aux_valor = linhas_tabela[n].find_element_by_xpath('./td[2]').text
                         valores.append(float(converter_texto_para_decimal(aux_valor)))
+                        print(aux_valor)
                         if((valores[n] > cotado[3]) and (valores[n] < float(nosso))):
                             if((valores[n-1] < cotado[3]) and (valores[n]-1 < float(nosso))):
                                 lance = valores[n]-intervalo
@@ -436,8 +436,11 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
                         print('Nosso preço está mais baixo que o atual para o item ', item['item'])
                         if(float(nosso) > (float(atual)*1.1)):
                             print('Dar lance de R$ ', str(float(nosso)*1.1),' para o item ',item['item'])
+                            item['menu_lances'].click()
                             return
+                        item['menu_lances'].click()#ABRIR E FECHAR MENU MELHORES LANCES#########################################
                         return
+        item['menu_lances'].click()
 
     def enviar_lance(self, item, valor):
         valor = str(valor).replace('.',',')
@@ -448,15 +451,16 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         return
 
     def extrair_relatorio(self):#TESTAR TESTAR TESTAR
+        print('TESTE - Extraiir relatório')
         self.navegacao_itens[2].click()
         itens_encerrados = sel.obter_elementos_xpath(self,'/html/body/app-root/div/div/div/app-cabecalho-disputa-fornecedor/div[5]/div[2]/app-disputa-fornecedor/div/p-tabview/div/div/p-tabpanel[3]/div/app-disputa-fornecedor-itens/div/p-dataview/div/div[2]/div/div')
         print('Itens para relatório: ',len(itens_encerrados))
-        self.resultado_por_item = []
+        resultado_por_item = []
         for item in itens_encerrados:
             aux_item = {}
             aux_item = {
                 'item':item.find_element_by_xpath('./div[1]/div[1]/div/div/span[1]').text,
-                'atual_valor' : str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[1]/div[2]/div[1]').text),
+                'melhor_valor' : str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[1]/div[2]/div[1]').text),
                 'nosso_valor' : str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[1]/div[2]/div[2]').text),
                 }
             item.find_element_by_xpath('./div[2]/div[2]/div/app-botao-icone/span/button/i').click()
@@ -469,13 +473,15 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
                 if(len(linhas_tabela)>0):
                     break
             colocacao = 1
-            print('Total de linhas: ',len(linhas_tabela))
             for linha in linhas_tabela:
                 if (linha.find_element_by_xpath('./td[2]').text == aux_item['nosso_valor']):
                     break
                 else:
                     colocacao += 1
-            print('Item: ',aux_item['item'],'\nMelhor Valor: ',aux_item['atual_valor'],'\nNosso Valor: ',aux_item['nosso_valor'],'\nColocação: ', colocacao)
+            sel.clicar_subelemento(self.sel_driver, item, './div[2]/div[2]/div/app-botao-icone/span/button/i')
+            aux_item['colocacao'] = colocacao
+            resultado_por_item.append(aux_item)
+        print(resultado_por_item)
 
 bot = ComprasNet()
 bot.iniciar()
