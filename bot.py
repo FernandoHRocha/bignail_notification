@@ -353,7 +353,7 @@ class Disputar:#DISPUTA OS PREÇOS DO PREGÃO REFERENTE AO ARQUIVO DE COTAÇÃO
         return tempo
     
     def obter_intervalo_lances_disputa(self,item):
-        return converter_intervalo_minimo(str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[2]/span/small').text))
+        return converter_intervalo_minimo(str(item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[2]').text))
     
     def obter_entrada_lance_disputa(self,item):
         return item.find_element_by_xpath('./div[2]/div[1]/div[2]/div/div[2]/div[2]/div/div[1]/input')

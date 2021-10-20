@@ -104,7 +104,7 @@ def acessar_menu_comprasnet(self):
         trocar_frame(self,'/html/frameset/frameset/frame')
         time.sleep(sel_delay)
         try:
-            clicar_xpath(self,'/html/body/div[2]/div[4]')
+            clicar_xpath(self,'/html/body/div[1]/div[4]')
             break
         except:
             self.sel_driver.refresh()
